@@ -2,7 +2,7 @@ import asyncio
 
 from aiogram import Bot, Dispatcher
 from handlers import register_handlers
-from handlers.bot_response import categorise_problem
+from handlers.categorise_input import categorise_problem
 from config.config import Config
 from controllers.db_controller import DatabaseController
 from middlewares import DatabaseMiddleware, UserMiddleware, AdminMiddleware

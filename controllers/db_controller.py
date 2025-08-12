@@ -550,14 +550,16 @@ class DatabaseController:
         self,
         exclude_closed: bool = True,
         exclude_messages_unforwarded: bool = False,
+        exclude_categorised: bool = True,
         user_id: int | None = None
     ) -> list[dict]:
         """
-        Retrieve all support tickets with multiple messages, optionally filtering for only active ones and a specific user.
+        Retrieve all support tickets with multiple messages, optionally filtering by status, forwarding, categorisation, and user.
 
         Args:
             exclude_closed (bool, optional): If True, only return tickets that are not closed.
-            exclude_messages_unforwarded (bool, optional): If False, only return tickets that have not been forwarded to admin.
+            exclude_messages_unforwarded (bool, optional): If True, only return tickets that have been forwarded to admin.
+            exclude_categorised (bool, optional): If True, only return tickets that have no support category assigned (support_issue IS NULL).
             user_id (int | None, optional): If provided, only return tickets for this user.
 
         Returns:
@@ -568,15 +570,21 @@ class DatabaseController:
                 conditions = []
                 values = []
 
+                param_index = 1  # For dynamic $n indexing in SQL query
+
                 if exclude_closed:
                     conditions.append("t.closed = FALSE")
 
                 if exclude_messages_unforwarded:
                     conditions.append("t.messages_forwarded = TRUE")
 
+                if exclude_categorised:
+                    conditions.append("t.support_issue IS NULL")
+
                 if user_id is not None:
-                    conditions.append("t.user_id = $1")
+                    conditions.append(f"t.user_id = ${param_index}")
                     values.append(user_id)
+                    param_index += 1
 
                 where_clause = f"WHERE {' AND '.join(conditions)}" if conditions else ""
 
@@ -828,4 +836,36 @@ class DatabaseController:
             raise
         except Exception as e:
             logger.error(f"Unexpected error while updating message {message_id} from user {user_id}: {e}")
+            raise
+
+    async def set_category_for_ticket(self, category_key: str, ticket_id: int) -> bool:
+        """Set the support issue category for a support ticket.
+
+        Args:
+            category_key (str): The classification key to assign to the ticket.
+            ticket_id (int): The ID of the support ticket to update.
+
+        Returns:
+            bool: True if the ticket was successfully updated, False otherwise.
+        """
+        try:
+            async with self.pool.acquire() as conn:
+                result = await conn.execute(
+                    """
+                    UPDATE support_tickets
+                    SET support_issue = $1
+                    WHERE ticket_id = $2
+                    """,
+                    category_key,
+                    ticket_id
+                )
+
+                # Check if any rows were affected
+                return result.endswith("UPDATE 1")
+
+        except PostgresError as e:
+            logger.error(f"Database error while setting category for ticket {ticket_id}: {e}")
+            raise
+        except Exception as e:
+            logger.error(f"Unexpected error while setting category for ticket {ticket_id}: {e}")
             raise

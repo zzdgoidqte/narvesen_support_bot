@@ -1,5 +1,7 @@
 import asyncio
 import random
+from handlers.forward_ticket_to_admin import forward_ticket_to_admin
+
 
 async def handle_not_received_drop(user_id, bot):
     await bot.send_message(user_id, "Hey, sorry to hear you haven’t received your product yet")

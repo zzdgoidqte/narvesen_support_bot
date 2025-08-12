@@ -1,26 +1,26 @@
 import asyncio
-import re
 from aiogram import Bot
 from aiogram.exceptions import TelegramAPIError
 from datetime import datetime, timedelta, timezone
 from utils.logger import logger
 from utils.helpers import query_nano_gpt
-from controllers.db_controller import DatabaseController
 from handlers.forward_ticket_to_admin import forward_ticket_to_admin
+from controllers.db_controller import DatabaseController
 from handlers.replies import *
 
 
 USER_CONVERSATIONS = {
-    "I haven't received my drop/product/goods": handle_not_received_drop,
-    "Payment sent, product not received": handle_payment_sent_no_product,
-    "When is restock coming for product/location?": handle_restock_info,
-    "Thanks/All good": handle_thanks,
-    "Oh nevermind, problem solved, all is good": handle_thanks,
-    "I have received incorect drop information or wrong drop": handle_forward_to_admin,
-	"Received less product than expected": handle_forward_to_admin,
-    "What do you think about ..?": handle_forward_to_admin,
-    "Other": handle_forward_to_admin,
-    "Spam": handle_spam,
+    "cant_find_product_or_drop": handle_not_received_drop,
+    "payment_sent_no_product": handle_payment_sent_no_product,
+    "dont_know_how_to_pay": handle_payment_help,
+    "restock_request": handle_restock_info,
+    "user_says_thanks": handle_thanks,
+    "issue_resolved_by_user": handle_thanks,
+    "wrong_drop_info": handle_forward_to_admin,
+    "less_product_received_than_expected": handle_forward_to_admin,
+    "opinion_question": handle_forward_to_admin,
+    "other": handle_forward_to_admin,
+    # "how long does it take for product to arrive"
 }
 
 async def categorise_problem(db: DatabaseController, bot: Bot):
@@ -32,7 +32,8 @@ async def categorise_problem(db: DatabaseController, bot: Bot):
     """
     while True:
         try:
-            active_tickets = await db.get_support_tickets(exclude_closed=True, exclude_messages_unforwarded=False)
+            # Retrieve all active, uncategorised tickets that are not forwarded to admin
+            active_tickets = await db.get_support_tickets(exclude_closed=True, exclude_messages_unforwarded=False, exclude_categorised=True)
 
             for ticket in active_tickets:
                 ticket_id = ticket.get("ticket_id")
@@ -70,23 +71,18 @@ async def handle_ticket(db: DatabaseController, bot: Bot, ticket):
         messages = ticket.get("messages", [])
 
         unread_messages = []
-        read_messages = []
 
         for msg in messages:
             msg_text = msg.get("user_text")
-            if msg.get("replied"):
-                if not msg.get('is_deleted'):
-                    read_messages.append(msg_text)
-            else:
-                if await is_message_deleted(bot, user_id, msg.get('message_id')):
-                    await db.mark_message_as_deleted(msg.get('id'))
-                    continue
-                unread_messages.append(msg_text)
+            if await is_message_deleted(bot, user_id, msg.get('message_id')):
+                await db.mark_message_as_deleted(msg.get('id'))
+                continue
+            unread_messages.append(msg_text)
 
         if not unread_messages:
             return  # Nothing to respond to
 
-        if len(unread_messages) > 50: # Block if spam
+        if len(unread_messages) > 25: # Block if spam?
             await db.set_messages_forwarded_for_ticket(ticket.get('ticket_id'))
             await forward_ticket_to_admin(db, bot, user, ticket)
             return
@@ -102,32 +98,27 @@ async def handle_ticket(db: DatabaseController, bot: Bot, ticket):
         # Use Nano-GPT to classify the issue
         input_text = "\n".join(unread_messages)
         prompt = f"""
-    Classify the user's messages into one of: {", ".join(USER_CONVERSATIONS.keys())}
+Classify the following user messages into one of these categories:
 
-    Messages:
-    {input_text}
+\"\"\"{"\n".join(USER_CONVERSATIONS.keys())}\"\"\"
 
-    Reply with only the matching key.
-    """
+User messages:
+\"\"\"{input_text}\"\"\"
+
+Reply with only the single most appropriate category name above.
+Pick 'other' if you are not confident.
+"""
         
         category_key = await query_nano_gpt(prompt)
         logger.info(f"Detected response category: {category_key}")
 
         # Check if it's a valid handler key
-        handler_func = None
-        if category_key in USER_CONVERSATIONS:
-            handler_func = USER_CONVERSATIONS[category_key]
+        category_key = 'other' if category_key not in USER_CONVERSATIONS else category_key # Handle unexpected output
+        handler_func = USER_CONVERSATIONS[category_key]
 
         if handler_func:
-            should_forward_ticket = await handler_func(user_id, bot)
-            if should_forward_ticket:
-                await db.set_messages_forwarded_for_ticket(ticket.get('ticket_id'))
-                await forward_ticket_to_admin(db, bot, user, ticket)
-        else:
-            # Unknown or invalid response from model (possible prompt injection)
-            logger.warning(f"Unrecognized category from model: {category_key}")
-            await db.set_messages_forwarded_for_ticket(ticket.get('ticket_id'))
-            await forward_ticket_to_admin(db, bot, user, ticket)
+            await db.set_category_for_ticket(category_key, ticket.get('ticket_id'))
+            await handler_func(user_id, bot)
 
     except Exception as e:
         logger.error(f"Error in handle_ticket: {e}")

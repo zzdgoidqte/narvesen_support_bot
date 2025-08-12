@@ -1,6 +1,8 @@
 from aiogram import Router, Bot
 from aiogram.types import InputMediaPhoto, CallbackQuery, FSInputFile
 from controllers.db_controller import DatabaseController
+from handlers.forward_ticket_to_admin import forward_ticket_to_admin
+
 import asyncio
 import random
 
@@ -10,9 +12,9 @@ async def handle_payment_help(user_id, bot: Bot):
     crypto_guide = """
 <b>💸 How to Pay with Crypto (BTC, ETH, LTC, TRX, USDT-TRC20)</b>
 
-1. Buy crypto using any wallet (we recommend services like <a href="https://www.bybit.com/">Bybit</a>).
+1. Buy crypto using any wallet - we recommend  <a href="https://www.bybit.com/">Bybit</a>
 
-2. Send the exact amount to the wallet address we give you.
+2. Send the exact amount to the wallet address we give you when you make an order.
 
 <b>⚡ Best Option: LTC or USDT-TRC20</b> — low fees & fast confirmation.
 
@@ -51,7 +53,7 @@ async def handle_payment_help(user_id, bot: Bot):
         ),
         InputMediaPhoto(media=photo2)
     ]
-    await bot.send_media_group(media)
+    await bot.send_media_group(user_id, media)
 
     warning_msg = """
 <b>‼️ Important Before You Pay ‼️</b>
