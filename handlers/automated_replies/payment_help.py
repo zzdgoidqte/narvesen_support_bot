@@ -1,8 +1,7 @@
 from aiogram import Router, Bot
-from aiogram.types import InputMediaPhoto, CallbackQuery, FSInputFile
+from aiogram.types import InputMediaPhoto, FSInputFile
 from controllers.db_controller import DatabaseController
 from utils.forward_ticket_to_admin import forward_ticket_to_admin
-
 import asyncio
 import random
 

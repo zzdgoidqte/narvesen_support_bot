@@ -838,11 +838,12 @@ class DatabaseController:
             logger.error(f"Unexpected error while updating message {message_id} from user {user_id}: {e}")
             raise
 
-    async def set_category_for_ticket(self, category_key: str, ticket_id: int) -> bool:
-        """Set the support issue category for a support ticket.
+    async def set_lang_and_category_for_ticket(self, category_key: str, lang: str, ticket_id: int) -> bool:
+        """Set the support issue category and language for a support ticket.
 
         Args:
             category_key (str): The classification key to assign to the ticket.
+            lang (str): The detected language code (e.g., lv, eng).
             ticket_id (int): The ID of the support ticket to update.
 
         Returns:
@@ -853,19 +854,20 @@ class DatabaseController:
                 result = await conn.execute(
                     """
                     UPDATE support_tickets
-                    SET support_issue = $1
-                    WHERE ticket_id = $2
+                    SET support_issue = $1,
+                        lang = $2
+                    WHERE ticket_id = $3
                     """,
                     category_key,
+                    lang,
                     ticket_id
                 )
 
-                # Check if any rows were affected
                 return result.endswith("UPDATE 1")
 
         except PostgresError as e:
-            logger.error(f"Database error while setting category for ticket {ticket_id}: {e}")
+            logger.error(f"Database error while setting category/lang for ticket {ticket_id}: {e}")
             raise
         except Exception as e:
-            logger.error(f"Unexpected error while setting category for ticket {ticket_id}: {e}")
+            logger.error(f"Unexpected error while setting category/lang for ticket {ticket_id}: {e}")
             raise

@@ -30,6 +30,8 @@ USER_CONVERSATIONS = {
     "other": handle_forward_to_admin,
 }
 
+LANGUAGES = ['lv', 'eng', 'ru', 'ee']
+
 async def categorise_problem(db: DatabaseController, bot: Bot):
     """
     Periodically checks for tickets needing categorisation.
@@ -105,26 +107,47 @@ async def handle_ticket(db: DatabaseController, bot: Bot, ticket):
         # Use Nano-GPT to classify the issue
         input_text = "\n".join(unread_messages)
         prompt = f"""
-Classify the following user messages into one of these categories:
+Classify the following user messages into:
 
+1. One of the following **categories**:
 \"\"\"{"\n".join(USER_CONVERSATIONS.keys())}\"\"\"
+
+2. One of the following **languages**:
+lv, eng, ru, ee
+
+If you are not confident about either the category or the language, use 'other'.
 
 User messages:
 \"\"\"{input_text}\"\"\"
 
-Reply with only the single most appropriate category name above.
-Pick 'other' if you are not confident.
+Respond **only** in this format (no extra explanation):
+lang:category
 """
         
-        category_key = await query_nano_gpt(prompt)
-        logger.info(f"Detected response category: {category_key}")
+        lang_and_category_key = await query_nano_gpt(prompt)
+
+        if ':' in lang_and_category_key:
+            lang, category_key = lang_and_category_key.strip().split(':', 1)
+            # Normalize and validate
+            lang = lang.strip().lower()
+            category_key = category_key.strip()
+
+            # Handle unexpected output
+            category_key = 'other' if category_key not in USER_CONVERSATIONS else category_key
+            lang = 'other' if lang not in LANGUAGES else lang
+
+            logger.info(f"Detected language: {lang}")
+            logger.info(f"Detected response category: {category_key}")
+        else:
+            logger.warning(f"Unexpected format from GPT: '{lang_and_category_key}'")
+            lang = 'other'
+            category_key = 'other'
 
         # Check if it's a valid handler key
-        category_key = 'other' if category_key not in USER_CONVERSATIONS else category_key # Handle unexpected output
         handler_func = USER_CONVERSATIONS[category_key]
 
         if handler_func:
-            await db.set_category_for_ticket(category_key, ticket.get('ticket_id'))
+            await db.set_lang_and_category_for_ticket(category_key, lang, ticket.get('ticket_id'))
             await handler_func(db, bot, user, ticket)
 
     except Exception as e:
