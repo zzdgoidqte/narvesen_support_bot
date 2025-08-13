@@ -8,7 +8,8 @@ import random
 
 router = Router()
 
-async def handle_payment_help(user_id, bot: Bot):
+async def handle_payment_help(db, bot, user, ticket: Bot):
+    user_id = user.get("user_id")
     crypto_guide = """
 <b>💸 How to Pay with Crypto (BTC, ETH, LTC, TRX, USDT-TRC20)</b>
 

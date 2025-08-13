@@ -99,7 +99,7 @@ async def handle_ticket(db: DatabaseController, bot: Bot, ticket):
             await forward_ticket_to_admin(db, bot, user, ticket)
             return
         elif all(msg == "(voice)" for msg in unread_messages):
-            await handle_voice_message(user_id, bot)
+            await handle_voice_message(db, bot, user, ticket)
             return
 
         # Use Nano-GPT to classify the issue
@@ -125,7 +125,7 @@ Pick 'other' if you are not confident.
 
         if handler_func:
             await db.set_category_for_ticket(category_key, ticket.get('ticket_id'))
-            await handler_func(user_id, bot)
+            await handler_func(db, bot, user, ticket)
 
     except Exception as e:
         logger.error(f"Error in handle_ticket: {e}")
