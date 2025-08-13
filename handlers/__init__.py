@@ -1,8 +1,9 @@
 from aiogram import Dispatcher
 
-from .replies import payment_help
+from .automated_replies import misc_replies
 from . import (
-    start_handler
+    start_handler,
+    misc_handler
 )
 
 
@@ -12,5 +13,5 @@ def register_handlers(dp: Dispatcher):
     """
     dp.include_routers(
         start_handler.router,
-        payment_help.router
+        misc_handler.router
     )

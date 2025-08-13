@@ -1,6 +1,6 @@
 import asyncio
 import random
-from handlers.forward_ticket_to_admin import forward_ticket_to_admin
+from utils.forward_ticket_to_admin import forward_ticket_to_admin
 
 
 async def handle_not_received_drop(user_id, bot):

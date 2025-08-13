@@ -1,6 +1,6 @@
 import asyncio
 import random
-from handlers.forward_ticket_to_admin import forward_ticket_to_admin
+from utils.forward_ticket_to_admin import forward_ticket_to_admin
 
 
 # TODO: (If user has an order then waits 30 minutes to see if the order has been marked as paid) (+if user hasnt even made an order then tell him to stfu and maybe even put him in restricted)
