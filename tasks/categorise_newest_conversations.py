@@ -10,17 +10,24 @@ from handlers.replies import *
 
 
 USER_CONVERSATIONS = {
-    "cant_find_product_or_drop": handle_not_received_drop,
-    "payment_sent_no_product": handle_payment_sent_no_product,
-    "dont_know_how_to_pay": handle_payment_help,
-    "restock_request": handle_restock_info,
+    # AI gathers more info, decides weather to respond or forward to admin 
+    "cant_find_product_or_drop_or_dead_drop": handle_not_received_drop, # Gather info, forward to admin
+    "payment_sent_no_product": handle_payment_sent_no_product, # Gather info, if order made more than 30 min ago then forward to admin, else tell user to wait
+    "dont_know_how_to_pay": handle_payment_help, # Tutorial
+    "restock_request_for_product_or_location": handle_restock_info, # Forward to admin? Or auto-reply "idk"
+    "is_product_still_available": handle_check_product_availability, # Checks database, automated response
+    "what_is_usual_product_arrival_time": handle_product_arrival_time, # AI 
+
+    # "👍"
     "user_says_thanks": handle_thanks,
     "issue_resolved_by_user": handle_thanks,
+
+    # Forward to admin
     "wrong_drop_info": handle_forward_to_admin,
-    "less_product_received_than_expected": handle_forward_to_admin,
+    "less_product_received_than_expected": handle_forward_to_admin, # Maybe automated response?
+    "kladmen_or_packaging_complaint": handle_forward_to_admin, # Maybe automated response?
     "opinion_question": handle_forward_to_admin,
     "other": handle_forward_to_admin,
-    # "how long does it take for product to arrive"
 }
 
 async def categorise_problem(db: DatabaseController, bot: Bot):
