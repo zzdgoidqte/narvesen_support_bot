@@ -1,9 +1,8 @@
 from aiogram import Router
-from aiogram.types import Message, FSInputFile, CallbackQuery
+from aiogram.types import Message, FSInputFile
 from aiogram.fsm.context import FSMContext
 from aiogram.enums import ChatType
 from utils.logger import logger
-from keyboards import inline
 from controllers.db_controller import DatabaseController
 from utils.helpers import escape_markdown_v1, is_similar_to_start
 

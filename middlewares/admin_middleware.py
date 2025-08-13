@@ -1,5 +1,5 @@
 from aiogram import BaseMiddleware, Bot
-from aiogram.types import Update, Chat, Message, InputFile
+from aiogram.types import Update, Chat, Message
 from aiogram.enums import ChatType
 from typing import Callable, Awaitable, Any, Dict
 from controllers.db_controller import DatabaseController

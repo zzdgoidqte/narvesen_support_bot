@@ -1,9 +1,5 @@
-import random
 import difflib
-import pytz
 import aiohttp
-from datetime import datetime
-from decimal import ROUND_CEILING, Decimal, getcontext
 from config.config import Config
 from utils.logger import logger
 
@@ -51,22 +47,16 @@ def format_number(value):
     return f"{value}".rstrip("0").rstrip(".") if "." in f"{value}" else f"{value}"
 
 
-def round_up_to_7_decimals(value: float) -> float:
-    getcontext().prec = 16  # Ensure enough precision
-    decimal_value = Decimal(str(value))
-    rounded = decimal_value.quantize(Decimal("0.0000001"), rounding=ROUND_CEILING)
-    return float(rounded)
-
 def escape_markdown_v1(text: str) -> str:
     """
-    Escape special characters for Telegram MarkdownV2.
+    Escape special characters for Telegram MarkdownV1.
     Escapes '_', '*', '`', '['.
 
     Args:
         text (str): Text to escape.
 
     Returns:
-        str: Escaped text safe for MarkdownV2.
+        str: Escaped text safe for MarkdownV1.
     """
     special_chars = r"_*[`"
     text = str(text)  # Convert to string to handle non-string inputs
@@ -88,16 +78,6 @@ def escape_markdown_v2(text: str) -> str:
     text = str(text)  # Convert to string to handle non-string inputs
     return "".join(f"\\{char}" if char in special_chars else char for char in text)
 
-
-def generate_order_id(product_name):
-    latvia_time = datetime.now(pytz.timezone("Europe/Riga"))
-    timestamp = latvia_time.strftime("%Y%m%d")
-
-    # Create product_identifier as the first letter of product_name in lowercase
-    product_identifier = product_name[0].lower()
-
-    sequence = random.randint(0000, 9999)
-    return f"{product_identifier}-{timestamp}-{sequence}"
 
 def is_similar_to_start(user_text: str, threshold: float = 0.7) -> bool:
     """

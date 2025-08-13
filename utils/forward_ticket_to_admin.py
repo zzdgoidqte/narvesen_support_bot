@@ -2,7 +2,7 @@ from aiogram import Bot
 from telethon import TelegramClient
 from telethon.tl.patched import Message
 from telethon.tl.functions.messages import CreateChatRequest, EditChatTitleRequest, EditChatAboutRequest, EditChatPhotoRequest, EditChatAdminRequest
-from telethon.tl.types import InputChatUploadedPhoto, ChatAdminRights
+from telethon.tl.types import InputChatUploadedPhoto
 from utils.logger import logger
 from controllers.db_controller import DatabaseController
 from config.config import Config

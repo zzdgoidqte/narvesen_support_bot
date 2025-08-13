@@ -1,5 +1,5 @@
 from aiogram import Router
-from aiogram.types import Message, CallbackQuery
+from aiogram.types import CallbackQuery
 from controllers.db_controller import DatabaseController
 from keyboards.inline import ticket_closed
 

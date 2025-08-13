@@ -1,6 +1,5 @@
 from aiogram import Dispatcher
 
-from .automated_replies import misc_replies
 from . import (
     start_handler,
     misc_handler
