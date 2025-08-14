@@ -2,7 +2,7 @@ import asyncio
 import random
 from utils.forward_ticket_to_admin import forward_ticket_to_admin
 
-async def handle_check_product_availability(db, bot, user, ticket):
+async def handle_check_product_availability(db, bot, user, ticket, lang):
     await db.close_support_ticket(ticket.get('ticket_id'))
     bot_settings = await db.get_bot_settings()
     bot_username = bot_settings.get('bot_username', 'Narvesen bot')

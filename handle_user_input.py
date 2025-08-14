@@ -148,8 +148,9 @@ lang:category
         handler_func = USER_CONVERSATIONS[category_key]
 
         if handler_func:
+            await bot.send_message(user_id, f"LOGGING\nDetected category: {category_key}\nLanguage: {lang}")
             await db.set_lang_and_category_for_ticket(category_key, lang, ticket.get('ticket_id'))
-            await handler_func(db, bot, user, ticket)
+            await handler_func(db, bot, user, ticket, lang)
 
     except Exception as e:
         logger.error(f"Error in handle_ticket: {e}")

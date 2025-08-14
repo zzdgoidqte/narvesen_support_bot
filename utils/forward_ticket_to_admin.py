@@ -12,7 +12,7 @@ from datetime import datetime
 from zoneinfo import ZoneInfo
 import os
 
-async def forward_ticket_to_admin(db: DatabaseController, bot: Bot, user, ticket):
+async def forward_ticket_to_admin(db: DatabaseController, bot: Bot, user, ticket, lang):
     try:
         # Initialize Telethon client
         api_id = Config.BOT_ADMIN_SESSION_API_ID

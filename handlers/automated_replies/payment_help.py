@@ -7,7 +7,7 @@ import random
 
 router = Router()
 
-async def handle_payment_help(db, bot, user, ticket: Bot):
+async def handle_payment_help(db, bot, user, ticket: Bot, lang):
     await db.close_support_ticket(ticket.get('ticket_id'))
     user_id = user.get("user_id")
     crypto_guide = """
