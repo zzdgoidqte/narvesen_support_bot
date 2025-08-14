@@ -12,11 +12,11 @@ from handlers.automated_replies import *
 USER_CONVERSATIONS = {
     # AI gathers more info, decides weather to respond or forward to admin 
     "cant_find_product_or_drop_or_dead_drop": handle_not_received_drop, # Gather info, forward to admin
-    "payment_sent_no_product": handle_payment_sent_no_product, # Gather info, if order made more than 30 min ago then forward to admin, else tell user to wait
-    "dont_know_how_to_pay": handle_payment_help, # Tutorial
-    "restock_request_for_product_or_location": handle_restock_info, # Forward to admin? Or auto-reply "idk"
-    "is_product_still_available": handle_check_product_availability, # Checks database, automated response
-    "what_is_usual_product_arrival_time": handle_product_arrival_time, # AI 
+    "payment_sent_no_product": handle_payment_sent_no_product, # Gather info, forward to admin
+    "dont_know_how_to_pay": handle_payment_help, # Automated response
+    "restock_request_for_product_or_location": handle_restock_info, # Automated response
+    "is_product_still_available": handle_check_product_availability, # Automated response
+    "what_is_usual_product_arrival_time": handle_product_arrival_time, # Automated response 
 
     # "👍"
     "user_says_thanks": handle_thanks,
