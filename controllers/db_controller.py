@@ -3,6 +3,7 @@ import asyncpg
 from aiogram import Bot
 from asyncpg.exceptions import PostgresError
 from datetime import datetime, timezone, timedelta
+from typing import Optional, Dict
 
 from config.config import Config
 from utils.logger import logger
@@ -667,6 +668,38 @@ class DatabaseController:
             raise
         except Exception as e:
             logger.error(f"Unexpected error while forwarding support ticket {ticket_id}: {e}")
+            raise
+
+
+    async def get_ticket(self, ticket_id: int) -> Optional[Dict]:
+        """Retrieve a support ticket by its ID.
+
+        Args:
+            ticket_id (int): The ID of the support ticket to retrieve.
+
+        Returns:
+            Optional[Dict]: A dictionary containing the ticket data if found, None otherwise.
+        """
+        try:
+            async with self.pool.acquire() as conn:
+                row = await conn.fetchrow(
+                    """
+                    SELECT *
+                    FROM support_tickets
+                    WHERE ticket_id = $1
+                    """,
+                    ticket_id
+                )
+
+                if row:
+                    return dict(row)
+                return None
+
+        except PostgresError as e:
+            logger.error(f"Database error while retrieving support ticket {ticket_id}: {e}")
+            raise
+        except Exception as e:
+            logger.error(f"Unexpected error while retrieving support ticket {ticket_id}: {e}")
             raise
 
     async def mark_messages_as_replied(self, ticket_id: int) -> bool:

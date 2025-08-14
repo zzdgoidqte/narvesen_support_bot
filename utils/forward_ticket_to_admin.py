@@ -54,6 +54,7 @@ async def forward_ticket_to_admin(db: DatabaseController, bot: Bot, user, ticket
 
         if user_group_id:
             await db.set_messages_forwarded_for_ticket(ticket.get('ticket_id'))
+            ticket = await db.get_ticket(ticket.get('ticket_id'))
             # Call a /ask at the start of ticket
             await ask(db, bot, user_id, user_group_id)
 
@@ -61,7 +62,7 @@ async def forward_ticket_to_admin(db: DatabaseController, bot: Bot, user, ticket
             messages = ticket.get("messages", [])
             await bot.send_message(
                 user_group_id,
-                "<b>Ticket nr. X</b>\n\n<b>Problem topic:</b> '[topic]'\n\nNOTE: You can't edit or delete the messages you send to user",
+                f"<b>Ticket topic:</b> '{ticket.get("support_issue", "Unknown")}'\n\nNOTE: You can't edit or delete the messages you send to user",
                 parse_mode="HTML",
                 reply_markup=inline.close_ticket(ticket.get("ticket_id"))
             )
