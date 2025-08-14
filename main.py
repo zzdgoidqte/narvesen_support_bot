@@ -2,7 +2,7 @@ import asyncio
 
 from aiogram import Bot, Dispatcher
 from handlers import register_handlers
-from tasks.categorise_newest_conversations import categorise_problem
+from handle_user_input import handle_user_input
 from config.config import Config
 from controllers.db_controller import DatabaseController
 from middlewares import DatabaseMiddleware, UserMiddleware, AdminMiddleware
@@ -26,7 +26,7 @@ async def main():
     register_handlers(dp)
 
     # Register async tasks
-    asyncio.create_task(categorise_problem(db, bot))
+    asyncio.create_task(handle_user_input(db, bot))
 
     logger.info("Starting bot polling...")
     try:

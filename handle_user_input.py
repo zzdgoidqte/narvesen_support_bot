@@ -23,16 +23,16 @@ USER_CONVERSATIONS = {
     "issue_resolved_by_user": handle_thanks,
 
     # Forward to admin
-    "wrong_drop_info": handle_forward_to_admin,
-    "less_product_received_than_expected": handle_forward_to_admin, # Maybe automated response?
-    "kladmen_or_packaging_complaint": handle_forward_to_admin, # Maybe automated response?
-    "opinion_question": handle_forward_to_admin,
-    "other": handle_forward_to_admin,
+    "wrong_drop_info": forward_ticket_to_admin,
+    "less_product_received_than_expected": forward_ticket_to_admin, # Maybe automated response?
+    "kladmen_or_packaging_complaint": forward_ticket_to_admin, # Maybe automated response?
+    "opinion_question": forward_ticket_to_admin,
+    "other": forward_ticket_to_admin,
 }
 
 LANGUAGES = ['lv', 'eng', 'ru', 'ee']
 
-async def categorise_problem(db: DatabaseController, bot: Bot):
+async def handle_user_input(db: DatabaseController, bot: Bot):
     """
     Periodically checks for tickets needing categorisation.
     For each one, runs a separate task to handle it.
@@ -71,7 +71,7 @@ async def categorise_problem(db: DatabaseController, bot: Bot):
 
             await asyncio.sleep(10)
         except Exception as e:
-            logger.error(f"Error in categorise_problem: {e}")
+            logger.error(f"Error in handle_user_input: {e}")
 
 async def handle_ticket(db: DatabaseController, bot: Bot, ticket):
     try:
@@ -91,8 +91,9 @@ async def handle_ticket(db: DatabaseController, bot: Bot, ticket):
         if not unread_messages:
             return  # Nothing to respond to
 
-        if len(unread_messages) > 25: # Block if spam?
+        if len(unread_messages) > 50: # Block if spam?
             await db.set_messages_forwarded_for_ticket(ticket.get('ticket_id'))
+            await db.mute_user(user_id)
             await forward_ticket_to_admin(db, bot, user, ticket)
             return
 

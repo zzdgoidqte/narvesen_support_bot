@@ -8,6 +8,7 @@ import random
 router = Router()
 
 async def handle_payment_help(db, bot, user, ticket: Bot):
+    await db.close_support_ticket(ticket.get('ticket_id'))
     user_id = user.get("user_id")
     crypto_guide = """
 <b>💸 How to Pay with Crypto (BTC, ETH, LTC, TRX, USDT-TRC20)</b>
@@ -58,11 +59,11 @@ async def handle_payment_help(db, bot, user, ticket: Bot):
     warning_msg = """
 <b>‼️ Important Before You Pay ‼️</b>
 
-Some crypto (like BTC or ETH) can be slow when the network is busy.
+Some crypto like BTC can be slow when the network is busy.
 
-✅ For faster delivery, use <b>LTC</b> or <b>USDT (TRC20)</b>.
+✅ For faster delivery, use <b>TRX</b>, <b>ETH</b> or <b>USDT-TRC20</b>.
 """
-    await asyncio.sleep(random.uniform(6, 12))
+    await asyncio.sleep(random.uniform(4, 6))
     await bot.send_message(
         user_id,
         warning_msg,
