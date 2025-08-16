@@ -15,7 +15,7 @@ async def start_handler(
     try:
         user_id = message.from_user.id
         username = message.from_user.username
-        user_has_orders = await db.get_orders_for_user(user_id)
+        user_has_orders = await db.get_order_count_for_user(user_id)
         bot_settings = await db.get_bot_settings()
         bot_username = bot_settings.get('bot_username', '')
 

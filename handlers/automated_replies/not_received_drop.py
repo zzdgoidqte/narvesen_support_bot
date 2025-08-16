@@ -31,4 +31,4 @@ async def handle_not_received_drop(db, bot, user, ticket, lang):
     await asyncio.sleep(random.uniform(4, 6))
     await bot.send_message(user_id, selected_messages[1])
 
-    await forward_ticket_to_admin(db, bot, user, ticket, lang)
+    # await forward_ticket_to_admin(db, bot, user, ticket, lang)

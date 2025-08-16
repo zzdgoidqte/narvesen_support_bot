@@ -1,4 +1,5 @@
 import asyncio
+import emoji
 from aiogram import Bot
 from aiogram.exceptions import TelegramAPIError
 from datetime import datetime, timedelta, timezone
@@ -112,6 +113,9 @@ async def categorise_ticket(db: DatabaseController, bot: Bot, ticket):
             await db.set_lang_and_category_for_ticket(category_key, lang, ticket.get('ticket_id'))
             await handle_voice_message(db, bot, user, ticket, lang)
             return
+        elif all(is_emoji_only(msg) or msg == '(sticker)' for msg in unread_messages):
+            await db.close_support_ticket(ticket.get('ticket_id'))
+            return
 
         # Use Nano-GPT to classify the issue
         input_text = "\n".join(unread_messages)
@@ -166,9 +170,8 @@ lang:category
 
 async def handle_categorised_ticket(db: DatabaseController, bot: Bot, ticket):
     """
-    Only 2 problems to handle in this scenario 
+    For now only 1 problems to handle in this scenario 
     1. cant_find_product_or_drop_or_dead_drop
-    2. payment_sent_no_product
 
     Before handling these, nano-gpt checks if user has is still complaining or user_says_thanks or issue_resolved_by_user
     
@@ -182,7 +185,7 @@ async def handle_categorised_ticket(db: DatabaseController, bot: Bot, ticket):
         all_messages = []
 
 
-        if support_issue not in ["cant_find_product_or_drop_or_dead_drop", "payment_sent_no_product"]:
+        if support_issue not in ["cant_find_product_or_drop_or_dead_drop"]:
             logger.error(f"Error in handle_categorised_task - wrong support issue: {support_issue}")
             return
         
@@ -269,3 +272,6 @@ async def is_message_deleted(bot: Bot, chat_id: int, message_id: int) -> bool:
             logger.error(f"Error in is_message_deleted: {e}")
             return False
         
+
+def is_emoji_only(text: str) -> bool:
+    return all(char in emoji.EMOJI_DATA for char in text if not char.isspace())

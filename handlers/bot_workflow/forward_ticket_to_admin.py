@@ -57,6 +57,8 @@ async def forward_ticket_to_admin(db: DatabaseController, bot: Bot, user, ticket
 
             # Forward all user sent messages to the target group
             messages = ticket.get("messages", [])
+            messages = sorted(messages, key=lambda msg: msg.get("created_at"))
+
             await bot.send_message(
                 user_group_id,
                 f"<b>Ticket topic:</b> '{ticket.get("support_issue", "Unknown")}'\n\nNOTE: You can't edit or delete the messages you send to user",
@@ -68,11 +70,14 @@ async def forward_ticket_to_admin(db: DatabaseController, bot: Bot, user, ticket
                 msg_id = msg.get("message_id")
                 is_deleted = msg.get("is_deleted")
                 if not is_deleted:
-                    await bot.forward_message(
-                        chat_id=user_group_id,
-                        from_chat_id=user_id,
-                        message_id=msg_id,
-                    )
+                    try:
+                        await bot.forward_message(
+                            chat_id=user_group_id,
+                            from_chat_id=user_id,
+                            message_id=msg_id,
+                        )
+                    except Exception as e:
+                        logger.error(f"Failed to forward message {msg_id} from user {user_id}: {e}")
                 else:
                     await bot.send_message(
                         chat_id=user_group_id,

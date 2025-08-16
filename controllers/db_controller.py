@@ -351,7 +351,7 @@ class DatabaseController:
                 logger.error(f"Unexpected error retrieving drop by id {drop_id}: {e}")
                 raise
 
-    async def get_orders_for_user(self, user_id: int):
+    async def get_order_count_for_user(self, user_id: int):
         """Retrieve the count of orders for a user.
 
         Args:
@@ -383,7 +383,35 @@ class DatabaseController:
                 logger.error(
                     f"Unexpected error getting orders for user: {e}"
                 )
+                raise  
+
+    async def get_orders_for_user(self, user_id: int):
+        """
+        Retrieve all orders for a user.
+
+        Args:
+            user_id (int): The ID of the user.
+
+        Returns:
+            list[Record]: A list of orders for the user.
+        """
+        async with self.pool.acquire() as conn:
+            try:
+                query = """
+                    SELECT *
+                    FROM orders
+                    WHERE user_id = $1
+                """
+                orders = await conn.fetch(query, user_id)
+                return [dict(order) for order in orders]
+
+            except PostgresError as e:
+                logger.error(f"Failed to get orders for user: {e}")
                 raise
+            except Exception as e:
+                logger.error(f"Unexpected error getting orders for user: {e}")
+                raise
+
     
     async def get_bot_settings(self):
         """Retrieve all bot settings from the bot_settings table.
@@ -671,9 +699,9 @@ class DatabaseController:
             logger.error(f"Unexpected error while forwarding support ticket {ticket_id}: {e}")
             raise
 
-
     async def get_ticket(self, ticket_id: int) -> Optional[Dict]:
-        """Retrieve a support ticket by its ID.
+        """
+        Retrieve a support ticket by its ID, including its messages.
 
         Args:
             ticket_id (int): The ID of the support ticket to retrieve.
@@ -685,9 +713,12 @@ class DatabaseController:
             async with self.pool.acquire() as conn:
                 row = await conn.fetchrow(
                     """
-                    SELECT *
-                    FROM support_tickets
-                    WHERE ticket_id = $1
+                    SELECT st.*,
+                        array_agg(sm.*) AS messages
+                    FROM support_tickets st
+                    JOIN support_messages sm ON sm.ticket_id = st.ticket_id
+                    WHERE st.ticket_id = $1
+                    GROUP BY st.ticket_id
                     """,
                     ticket_id
                 )
@@ -702,6 +733,7 @@ class DatabaseController:
         except Exception as e:
             logger.error(f"Unexpected error while retrieving support ticket {ticket_id}: {e}")
             raise
+
 
     async def mark_messages_as_replied(self, ticket_id: int) -> bool:
         """Mark all messages for a given ticket as replied.
