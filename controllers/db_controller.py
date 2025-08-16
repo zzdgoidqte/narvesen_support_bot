@@ -547,20 +547,20 @@ class DatabaseController:
                 logger.error(f"Unexpected error while logging message from user {user_id}: {e}")
                 raise
 
-    async def get_support_tickets(
+    async def get_active_support_tickets(
         self,
-        exclude_closed: bool = True,
-        exclude_messages_unforwarded: bool = False,
-        exclude_categorised: bool = True,
+        messages_forwarded: bool | None = None,
         user_id: int | None = None
     ) -> list[dict]:
         """
-        Retrieve all support tickets with multiple messages, optionally filtering by status, forwarding, categorisation, and user.
+        Retrieve all unclosed support tickets with multiple messages, 
+        optionally filtering by forwarding status and user.
 
         Args:
-            exclude_closed (bool, optional): If True, only return tickets that are not closed.
-            exclude_messages_unforwarded (bool, optional): If True, only return tickets that have been forwarded to admin.
-            exclude_categorised (bool, optional): If True, only return tickets that have no support category assigned (support_issue IS NULL).
+            messages_forwarded (bool | None, optional): 
+                - If True, only return tickets forwarded to admin.
+                - If False, only return tickets NOT forwarded.
+                - If None, don't filter by this field.
             user_id (int | None, optional): If provided, only return tickets for this user.
 
         Returns:
@@ -571,17 +571,18 @@ class DatabaseController:
                 conditions = []
                 values = []
 
-                param_index = 1  # For dynamic $n indexing in SQL query
+                param_index = 1  # For dynamic $n indexing in SQL
 
-                if exclude_closed:
-                    conditions.append("t.closed = FALSE")
+                # Always filter for open (unclosed) tickets
+                conditions.append("t.closed = FALSE")
 
-                if exclude_messages_unforwarded:
-                    conditions.append("t.messages_forwarded = TRUE")
+                # Filter by messages_forwarded if explicitly set
+                if messages_forwarded is not None:
+                    conditions.append(f"t.messages_forwarded = ${param_index}")
+                    values.append(messages_forwarded)
+                    param_index += 1
 
-                if exclude_categorised:
-                    conditions.append("t.support_issue IS NULL")
-
+                # Filter by user_id if provided
                 if user_id is not None:
                     conditions.append(f"t.user_id = ${param_index}")
                     values.append(user_id)

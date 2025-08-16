@@ -32,53 +32,54 @@ USER_CONVERSATIONS = {
 
 LANGUAGES = ['lv', 'eng', 'ru', 'ee']
 
-async def handle_user_input(db: DatabaseController, bot: Bot):
+async def handle_unforwarded_tickets(db: DatabaseController, bot: Bot):
     """
-    Periodically checks for tickets needing categorisation.
+    Periodically checks for unforwardeed tickets.
     For each one, runs a separate task to handle it.
 
-    Categorizes user response into 'conversation' and 'issue'
+    If ticket uncategorised (support_issue=None) then categorise the issue.
+    Else retrieve additional info from user to complete ticket.
     """
     while True:
         try:
-            # Retrieve all active, uncategorised tickets that are not forwarded to admin
-            active_tickets = await db.get_support_tickets(exclude_closed=True, exclude_messages_unforwarded=False, exclude_categorised=True)
+            # HANDLE UNFORWARDED MESSAGES TO ADMIN
+            active_unforwarded_tickets = await db.get_active_support_tickets(messages_forwarded=False)
 
-            for ticket in active_tickets:
+            for ticket in active_unforwarded_tickets:
                 ticket_id = ticket.get("ticket_id")
                 messages = ticket.get("messages", [])
-                messages.sort(key=lambda msg: msg["message_id"])
+                support_issue = ticket.get("support_issue")
 
-                # Double check just in case
-                if ticket.get("closed"):
-                    continue
+                messages.sort(key=lambda msg: msg["message_id"])
 
                 # Skip if user hasn't replied
                 last_msg = messages[-1]
                 last_msg_time = last_msg.get("created_at") # UTC
                 time_diff = datetime.now(timezone.utc) - last_msg_time
                 if last_msg.get("replied"): 
-                    # Close inactive tickets older than 3 days
-                    if time_diff > timedelta(days=3):
-                        await db.close_support_ticket(ticket_id) 
+                    # Close inactive tickets older than 2 days (if not forwarded to admin)
+                    if time_diff > timedelta(days=2):
+                        await db.close_support_ticket(ticket_id)
                     continue
 
                 # Reply to user if his latest message was more than 2 minutes ago
-                if time_diff > timedelta(seconds=20):
+                if time_diff > timedelta(seconds=20): # Placeholer 20sec for testing
                     # Mark as handled
                     await db.mark_messages_as_replied(ticket_id)
-                    asyncio.create_task(handle_ticket(db, bot, ticket))
+                    if not support_issue:
+                        asyncio.create_task(categorise_ticket(db, bot, ticket))
+                    else:
+                        asyncio.create_task(handle_categorised_ticket(db, bot, ticket))
 
             await asyncio.sleep(10)
         except Exception as e:
-            logger.error(f"Error in handle_user_input: {e}")
+            logger.error(f"Error in handle_unforwarded_tickets: {e}")
 
-async def handle_ticket(db: DatabaseController, bot: Bot, ticket):
+async def categorise_ticket(db: DatabaseController, bot: Bot, ticket):
     try:
         user_id = ticket.get("user_id")
         user = await db.get_user_by_id(user_id)
         messages = ticket.get("messages", [])
-
         unread_messages = []
 
         for msg in messages:
@@ -94,15 +95,21 @@ async def handle_ticket(db: DatabaseController, bot: Bot, ticket):
         if len(unread_messages) > 50: # Block if spam?
             await db.set_messages_forwarded_for_ticket(ticket.get('ticket_id'))
             await db.mute_user(user_id)
-            await forward_ticket_to_admin(db, bot, user, ticket)
+            # await forward_ticket_to_admin(db, bot, user, ticket, lang)
             return
 
         # Special media-only cases
         if all(msg in ["(photo)", "(video)", "(video_note)"] for msg in unread_messages):
-            await forward_ticket_to_admin(db, bot, user, ticket)
+            category_key = 'media'
+            lang = 'other'
+            await db.set_lang_and_category_for_ticket(category_key, lang, ticket.get('ticket_id'))
+            await forward_ticket_to_admin(db, bot, user, ticket, lang)
             return
         elif all(msg == "(voice)" for msg in unread_messages):
-            await handle_voice_message(db, bot, user, ticket)
+            category_key = 'voice_message'
+            lang = 'other'
+            await db.set_lang_and_category_for_ticket(category_key, lang, ticket.get('ticket_id'))
+            await handle_voice_message(db, bot, user, ticket, lang)
             return
 
         # Use Nano-GPT to classify the issue
@@ -153,8 +160,11 @@ lang:category
             await handler_func(db, bot, user, ticket, lang)
 
     except Exception as e:
-        logger.error(f"Error in handle_ticket: {e}")
+        logger.error(f"Error in categorise_ticket: {e}")
 
+
+async def handle_categorised_ticket(db: DatabaseController, bot: Bot, ticket):
+    pass
 
 async def is_message_deleted(bot: Bot, chat_id: int, message_id: int) -> bool:
     try:
@@ -179,3 +189,4 @@ async def is_message_deleted(bot: Bot, chat_id: int, message_id: int) -> bool:
         else:
             logger.error(f"Error in is_message_deleted: {e}")
             return False
+        

@@ -32,7 +32,7 @@ class AdminMiddleware(BaseMiddleware):
                 # Fetch chat info from Bot API
                 chat: Chat = await self.bot.get_chat(msg.chat.id)
                 user_id = chat.description  # Assuming description is user_id
-                user_active_tickets = await self.db.get_support_tickets(exclude_closed=True, user_id=int(user_id))
+                user_active_tickets = await self.db.get_active_support_tickets(user_id=int(user_id))
                 if not user_active_tickets:
                     await self.bot.send_message(msg.chat.id, "‼️MESSAGE NOT SENT‼️\n\nℹ️ You can't chat with the client until this bot sends another ticket from him!\nℹ️ Write him a private message from your account if you need to talk to him.")
                     return await handler(event, data)

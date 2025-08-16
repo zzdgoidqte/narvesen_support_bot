@@ -2,7 +2,7 @@ import asyncio
 
 from aiogram import Bot, Dispatcher
 from handlers import register_handlers
-from handle_user_input import handle_user_input
+from handle_unforwarded_tickets import handle_unforwarded_tickets
 from config.config import Config
 from controllers.db_controller import DatabaseController
 from middlewares import DatabaseMiddleware, UserMiddleware, AdminMiddleware
@@ -26,7 +26,7 @@ async def main():
     register_handlers(dp)
 
     # Register async tasks
-    asyncio.create_task(handle_user_input(db, bot))
+    asyncio.create_task(handle_unforwarded_tickets(db, bot))
 
     logger.info("Starting bot polling...")
     try:
