@@ -5,13 +5,13 @@ from utils.logger import logger
 
 
 
-async def query_nano_gpt(prompt: str, model: str = "gpt-4o-mini", temperature: float = 0.0, max_tokens: int = 15) -> str | None:
+async def query_nano_gpt(prompt: str, model: str = "yi-lightning", temperature: float = 0.0, max_tokens: int = 15) -> str | None:
     """
     Sends a prompt to the Nano-GPT API and returns the model's response.
 
     Args:
         prompt (str): The prompt to send.
-        model (str): The model to use. Default is 'gpt-4o-mini'.
+        model (str): The model to use. Default is 'yi-lightning'. (gpt-4o-mini was not as percise in my tests)
         temperature (float): Sampling temperature. (How creative is the model response)
         max_tokens (int): Max tokens to generate. (For simple single sentence output can limit to small amount of tokens)
 
@@ -90,6 +90,8 @@ def is_similar_to_start(user_text: str, threshold: float = 0.7) -> bool:
     Returns:
         bool: True if message is similar to 'start'
     """
+    if not user_text:
+        return False
     user_text = user_text.strip().lower()
 
     # Remove leading characters like / or #

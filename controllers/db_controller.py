@@ -141,7 +141,7 @@ class DatabaseController:
                 now = datetime.now(timezone.utc)
 
                 if muted_until < now:
-                    # Mute expired — remove the record
+                    # Mute expired - remove the record
                     delete_query = """
                         DELETE FROM support_user_muted
                         WHERE user_id = $1

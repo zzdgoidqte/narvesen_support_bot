@@ -15,44 +15,44 @@ async def handle_payment_help(db, bot, user, ticket, lang):
         "lv": """
 <b>💸 Kā maksāt ar kriptovalūtu (BTC, ETH, LTC, TRX, USDT-TRC20)</b>
 
-1. Iegādājies kriptovalūtu jebkurā makā – iesakām <a href="https://www.bybit.com/">Bybit</a>.
+1. Iegādājies kriptovalūtu jebkurā makā - iesakām <a href="https://www.bybit.com/">Bybit</a>.
 
 2. Nosūti precīzu summu uz maku, ko mēs tev sniegsim pasūtījuma veikšanas laikā.
 
-<b>⚡ Labākā izvēle: LTC vai USDT-TRC20</b> — zemas komisijas un ātra apstiprināšana.
+<b>⚡ Labākā izvēle: LTC vai USDT-TRC20</b> - zemas komisijas un ātra apstiprināšana.
 
 3. Kad maksājums būs apstiprināts, tu saņemsi savu pasūtījumu.
 """,
         "ee": """
 <b>💸 Kuidas maksta krüptoga (BTC, ETH, LTC, TRX, USDT-TRC20)</b>
 
-1. Osta krüpto ükskõik millise rahakoti kaudu – soovitame <a href="https://www.bybit.com/">Bybit</a>.
+1. Osta krüpto ükskõik millise rahakoti kaudu - soovitame <a href="https://www.bybit.com/">Bybit</a>.
 
 2. Saada täpne summa aadressile, mille anname tellimuse esitamisel.
 
-<b>⚡ Parim valik: LTC või USDT-TRC20</b> — madalad tasud ja kiire kinnitus.
+<b>⚡ Parim valik: LTC või USDT-TRC20</b> - madalad tasud ja kiire kinnitus.
 
 3. Kui makse on kinnitatud, saad oma tellimuse.
 """,
         "ru": """
 <b>💸 Как оплатить криптовалютой (BTC, ETH, LTC, TRX, USDT-TRC20)</b>
 
-1. Купите криптовалюту в любом кошельке – мы рекомендуем <a href="https://www.bybit.com/">Bybit</a>.
+1. Купите криптовалюту в любом кошельке - мы рекомендуем <a href="https://www.bybit.com/">Bybit</a>.
 
 2. Отправьте точную сумму на адрес, который мы вам дадим при оформлении заказа.
 
-<b>⚡ Лучший вариант: LTC или USDT-TRC20</b> — низкие комиссии и быстрая обработка.
+<b>⚡ Лучший вариант: LTC или USDT-TRC20</b> - низкие комиссии и быстрая обработка.
 
 3. После подтверждения оплаты вы получите свой заказ.
 """,
         "eng": """
 <b>💸 How to Pay with Crypto (BTC, ETH, LTC, TRX, USDT-TRC20)</b>
 
-1. Buy crypto using any wallet – we recommend <a href="https://www.bybit.com/">Bybit</a>.
+1. Buy crypto using any wallet - we recommend <a href="https://www.bybit.com/">Bybit</a>.
 
 2. Send the exact amount to the wallet address we give you when you make an order.
 
-<b>⚡ Best Option: LTC or USDT-TRC20</b> — low fees & fast confirmation.
+<b>⚡ Best Option: LTC or USDT-TRC20</b> - low fees & fast confirmation.
 
 3. Once confirmed, you’ll get your order.
 """
@@ -71,7 +71,7 @@ async def handle_payment_help(db, bot, user, ticket, lang):
 
 ✅ Kad mēs saņemam maksājumu, pasūtījums tiek izsūtīts.
 
-<b>🔒 Piezīme:</b> Mercuryo nav mūsu īpašumā – tava informācija paliek privāta.
+<b>🔒 Piezīme:</b> Mercuryo nav mūsu īpašumā - tava informācija paliek privāta.
 
 ⚠️ Apmaiņas maksa tiek piemērota. Kriptomaksājumi ir lētāki un ātrāki!
 """,
@@ -86,7 +86,7 @@ async def handle_payment_help(db, bot, user, ticket, lang):
 
 ✅ Kui me saame makse kätte, saadetakse sinu tellimus.
 
-<b>🔒 Märkus:</b> Mercuryo ei kuulu meile – sinu andmed jäävad konfidentsiaalseks.
+<b>🔒 Märkus:</b> Mercuryo ei kuulu meile - sinu andmed jäävad konfidentsiaalseks.
 
 ⚠️ Võib lisanduda vahetustasu. Krüptoga on odavam ja kiirem!
 """,
@@ -101,7 +101,7 @@ async def handle_payment_help(db, bot, user, ticket, lang):
 
 ✅ После получения оплаты мы отправим ваш заказ.
 
-<b>🔒 Примечание:</b> Mercuryo нам не принадлежит – ваша информация остается конфиденциальной.
+<b>🔒 Примечание:</b> Mercuryo нам не принадлежит - ваша информация остается конфиденциальной.
 
 ⚠️ Комиссии биржи применимы. Криптовалюта дешевле и быстрее!
 """,
@@ -116,7 +116,7 @@ async def handle_payment_help(db, bot, user, ticket, lang):
 
 ✅ Once we get the crypto, your order is sent.
 
-<b>🔒 Note:</b> We don’t own Mercuryo – your info stays private.
+<b>🔒 Note:</b> We don’t own Mercuryo - your info stays private.
 
 ⚠️ Exchange fees apply. Crypto payments are cheaper & faster!
 """

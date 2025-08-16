@@ -81,7 +81,7 @@ async def forward_ticket_to_admin(db: DatabaseController, bot: Bot, user, ticket
                 else:
                     await bot.send_message(
                         chat_id=user_group_id,
-                        text=f"(DELETED MESSAGE)\n{msg.get("user_text")})"
+                        text=f"(DELETED MESSAGE)\n{msg.get("user_text")}"
                     )
         else:
             logger.error("Error sending messages")

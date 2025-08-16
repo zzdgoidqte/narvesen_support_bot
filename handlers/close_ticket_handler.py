@@ -19,3 +19,7 @@ async def close_ticket_callback(callback: CallbackQuery, db: DatabaseController)
     # Notify user
     await callback.message.answer(text)
 
+
+@router.callback_query()
+async def close_ticket_callback(callback: CallbackQuery, db: DatabaseController):
+    print("success")

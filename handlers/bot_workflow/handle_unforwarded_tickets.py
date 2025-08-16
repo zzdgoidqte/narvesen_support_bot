@@ -13,7 +13,6 @@ from handlers.automated_replies import *
 USER_CONVERSATIONS = {
     # AI gathers more info, then forwards to admin
     "cant_find_product_or_drop_or_dead_drop": handle_not_received_drop,
-    "payment_sent_no_product": handle_payment_sent_no_product,
 
     # Automated response
     "dont_know_how_to_pay": handle_payment_help,
@@ -27,6 +26,7 @@ USER_CONVERSATIONS = {
 
     # Forward to admin
     "wrong_drop_info": forward_ticket_to_admin,
+    "payment_sent_no_product": forward_ticket_to_admin,
     "less_product_received_than_expected": forward_ticket_to_admin, # Maybe automated response?
     "kladmen_or_packaging_complaint": forward_ticket_to_admin, # Maybe automated response?
     "opinion_question": forward_ticket_to_admin,
