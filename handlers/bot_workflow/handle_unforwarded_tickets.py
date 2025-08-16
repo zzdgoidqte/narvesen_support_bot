@@ -23,13 +23,14 @@ USER_CONVERSATIONS = {
     # "👍"
     "user_says_thanks": handle_thanks,
     "issue_resolved_by_user": handle_thanks,
+    "ok": handle_thanks,
 
     # Forward to admin
     "wrong_drop_info": forward_ticket_to_admin,
     "payment_sent_no_product": forward_ticket_to_admin,
     "less_product_received_than_expected": forward_ticket_to_admin, # Maybe automated response?
     "kladmen_or_packaging_complaint": forward_ticket_to_admin, # Maybe automated response?
-    "opinion_question": forward_ticket_to_admin,
+    "opinion_or_info_question": forward_ticket_to_admin,
     "other": forward_ticket_to_admin,
 }
 
@@ -128,7 +129,7 @@ Classify the following user messages into:
 2. One of the following **languages**:
 lv, eng, ru, ee
 
-If you are not confident about either the category or the language, use 'other'.
+If you are not more than 80% confident about either the category or the language, use 'other'.
 
 User messages:
 \"\"\"{input_text}\"\"\"
@@ -162,6 +163,10 @@ lang:category
         if handler_func:
             await bot.send_message(user_id, f"LOGGING\nDetected category: {category_key}\nLanguage: {lang}")
             await db.set_lang_and_category_for_ticket(category_key, lang, ticket.get('ticket_id'))
+            if category_key == "cant_find_product_or_drop_or_dead_drop": # Lost drop with proof
+                if any(msg in ["(photo)", "(video)", "(video_note)"] for msg in unread_messages):
+                    await forward_ticket_to_admin(db, bot, user, ticket, lang)
+                    return
             await handler_func(db, bot, user, ticket, lang)
 
     except Exception as e:
@@ -235,12 +240,10 @@ Respond with only one word: Complaint or Resolved.
         
         if message_classification.strip().lower() == 'complaint':
             if support_issue == "cant_find_product_or_drop_or_dead_drop":
-                if any(msg in ["(photo)", "(video)", "(video_note)"] for msg in all_messages):
-                    await forward_ticket_to_admin(db, bot, user, ticket, lang)
-                else:
-                    return # If no media present (proof) then ignore the user
-            elif support_issue == "payment_sent_no_product":            
+                # if any(msg in ["(photo)", "(video)", "(video_note)"] for msg in all_messages):
                 await forward_ticket_to_admin(db, bot, user, ticket, lang)
+                # else:
+                #     return # If no media present (proof) then ignore the user
         elif message_classification.strip().lower() == 'resolved':
             await handle_thanks(db, bot, user, ticket, lang)
 

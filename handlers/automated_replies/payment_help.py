@@ -12,51 +12,52 @@ async def handle_payment_help(db, bot, user, ticket, lang):
 
     # --- Localized crypto guide messages ---
     crypto_guides = {
-        "lv": """
+    "lv": """
 <b>💸 Kā maksāt ar kriptovalūtu (BTC, ETH, LTC, TRX, USDT-TRC20)</b>
 
-1. Iegādājies kriptovalūtu jebkurā makā - iesakām <a href="https://www.bybit.com/">Bybit</a>.
+1. Iegādājies kriptovalūtu jebkurā makā – iesakām <a href="https://www.bybit.com/">Bybit</a>.
 
 2. Nosūti precīzu summu uz maku, ko mēs tev sniegsim pasūtījuma veikšanas laikā.
 
-<b>⚡ Labākā izvēle: LTC vai USDT-TRC20</b> - zemas komisijas un ātra apstiprināšana.
+<b>⚠️ Ņem vērā:</b> BTC darījumi aizņem būtiski ilgāku laiku nekā citas kriptovalūtas, kas var aizkavēt pasūtījuma apstrādi.
 
 3. Kad maksājums būs apstiprināts, tu saņemsi savu pasūtījumu.
 """,
-        "ee": """
+    "ee": """
 <b>💸 Kuidas maksta krüptoga (BTC, ETH, LTC, TRX, USDT-TRC20)</b>
 
-1. Osta krüpto ükskõik millise rahakoti kaudu - soovitame <a href="https://www.bybit.com/">Bybit</a>.
+1. Osta krüpto ükskõik millise rahakoti kaudu – soovitame <a href="https://www.bybit.com/">Bybit</a>.
 
 2. Saada täpne summa aadressile, mille anname tellimuse esitamisel.
 
-<b>⚡ Parim valik: LTC või USDT-TRC20</b> - madalad tasud ja kiire kinnitus.
+<b>⚠️ Pane tähele:</b> BTC tehingud võtavad märgatavalt kauem aega kui muud krüptod ja võivad põhjustada viivitusi tellimuse kinnitamisel.
 
 3. Kui makse on kinnitatud, saad oma tellimuse.
 """,
-        "ru": """
+    "ru": """
 <b>💸 Как оплатить криптовалютой (BTC, ETH, LTC, TRX, USDT-TRC20)</b>
 
-1. Купите криптовалюту в любом кошельке - мы рекомендуем <a href="https://www.bybit.com/">Bybit</a>.
+1. Купите криптовалюту в любом кошельке — мы рекомендуем <a href="https://www.bybit.com/">Bybit</a>.
 
 2. Отправьте точную сумму на адрес, который мы вам дадим при оформлении заказа.
 
-<b>⚡ Лучший вариант: LTC или USDT-TRC20</b> - низкие комиссии и быстрая обработка.
+<b>⚠️ Обратите внимание:</b> Транзакции в BTC обрабатываются значительно дольше, чем в других валютах, что может задержать ваш заказ.
 
 3. После подтверждения оплаты вы получите свой заказ.
 """,
-        "eng": """
+    "eng": """
 <b>💸 How to Pay with Crypto (BTC, ETH, LTC, TRX, USDT-TRC20)</b>
 
-1. Buy crypto using any wallet - we recommend <a href="https://www.bybit.com/">Bybit</a>.
+1. Buy crypto using any wallet – we recommend <a href="https://www.bybit.com/">Bybit</a>.
 
 2. Send the exact amount to the wallet address we give you when you make an order.
 
-<b>⚡ Best Option: LTC or USDT-TRC20</b> - low fees & fast confirmation.
+<b>⚠️ Note:</b> BTC transactions take significantly longer to process than other cryptocurrencies and may delay your order.
 
 3. Once confirmed, you’ll get your order.
 """
     }
+
 
     # --- Localized card payment instructions ---
     card_payment_captions = {
@@ -122,42 +123,9 @@ async def handle_payment_help(db, bot, user, ticket, lang):
 """
     }
 
-    # --- Localized crypto warning ---
-    warning_messages = {
-        "lv": """
-<b>‼️ Svarīgi pirms maksāšanas ‼️</b>
-
-Dažas kriptovalūtas, piemēram, BTC, var būt lēnas, kad tīkls ir noslogots.
-
-✅ Lai pasūtījums tiktu piegādāts ātrāk, izmanto <b>TRX</b>, <b>ETH</b> vai <b>USDT-TRC20</b>.
-""",
-        "ee": """
-<b>‼️ Tähtis enne maksmist ‼️</b>
-
-Mõned krüptod, nagu BTC, võivad võrgu koormuse ajal olla aeglased.
-
-✅ Kiiremaks kohaletoimetamiseks kasuta <b>TRX</b>, <b>ETH</b> või <b>USDT-TRC20</b>.
-""",
-        "ru": """
-<b>‼️ Важно перед оплатой ‼️</b>
-
-Некоторые криптовалюты, такие как BTC, могут быть медленными при высокой нагрузке сети.
-
-✅ Для более быстрой доставки используйте <b>TRX</b>, <b>ETH</b> или <b>USDT-TRC20</b>.
-""",
-        "eng": """
-<b>‼️ Important Before You Pay ‼️</b>
-
-Some crypto like BTC can be slow when the network is busy.
-
-✅ For faster delivery, use <b>TRX</b>, <b>ETH</b> or <b>USDT-TRC20</b>.
-"""
-    }
-
     # --- Get texts by language ---
     crypto_text = crypto_guides.get(lang, crypto_guides["eng"])
     card_caption = card_payment_captions.get(lang, card_payment_captions["eng"])
-    warning_text = warning_messages.get(lang, warning_messages["eng"])
 
     # --- Send crypto guide ---
     await bot.send_message(
@@ -175,12 +143,3 @@ Some crypto like BTC can be slow when the network is busy.
         InputMediaPhoto(media=photo2)
     ]
     await bot.send_media_group(user_id, media)
-
-    # --- Send final warning after short delay ---
-    await asyncio.sleep(random.uniform(4, 6))
-    await bot.send_message(
-        user_id,
-        warning_text,
-        parse_mode="HTML",
-        disable_web_page_preview=True
-    )

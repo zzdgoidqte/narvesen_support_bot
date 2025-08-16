@@ -4,7 +4,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.enums import ChatType
 from utils.logger import logger
 from controllers.db_controller import DatabaseController
-from utils.helpers import escape_markdown_v1, is_similar_to_start
+from utils.helpers import is_similar_to_start
 
 router = Router()
 @router.message(lambda message: message.chat.type == ChatType.PRIVATE and is_similar_to_start(message.text))
