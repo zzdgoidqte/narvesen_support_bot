@@ -1,6 +1,5 @@
 from aiogram import Bot
 from telethon import TelegramClient
-from telethon.tl.patched import Message
 from telethon.tl.functions.messages import CreateChatRequest, EditChatTitleRequest, EditChatAboutRequest, EditChatPhotoRequest, EditChatAdminRequest
 from telethon.tl.types import InputChatUploadedPhoto
 from utils.logger import logger
@@ -8,8 +7,6 @@ from controllers.db_controller import DatabaseController
 from config.config import Config
 from utils.helpers import escape_markdown_v1
 from keyboards import inline
-from datetime import datetime
-from zoneinfo import ZoneInfo
 import os
 
 async def forward_ticket_to_admin(db: DatabaseController, bot: Bot, user, ticket, lang):
@@ -164,20 +161,6 @@ async def create_user_group(db: DatabaseController, client: TelegramClient, bot:
     except Exception as e:
         logger.error(f"Failed to create group for user {user_id}: {e}")
         raise
-    
-async def check_messages_today(client: TelegramClient, group_id: int):
-    helsinki_tz = ZoneInfo("Europe/Helsinki")
-    today = datetime.now(helsinki_tz).date()
-
-    # Get the last 3 messages in the group
-    async for message in client.iter_messages(group_id, limit=3):
-        if isinstance(message, Message):
-            # Convert UTC datetime to Helsinki date
-            message_date = message.date.astimezone(helsinki_tz).date()
-            print(f"Message ID {message.id} - Date in EEST: {message_date}, Today: {today}")
-            if message_date == today:
-                return True  # At least one message was sent today
-    return False  # None of the last 3 messages were sent today
 
 async def ask(db: DatabaseController, bot: Bot, user_id: int, group_id: int):
     """Handle automatic /ask for user when he writes for the first time, splitting response if over 4096 chars."""

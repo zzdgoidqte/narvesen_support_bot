@@ -10,13 +10,15 @@ from handlers.automated_replies import *
 
 
 USER_CONVERSATIONS = {
-    # AI gathers more info, decides weather to respond or forward to admin 
-    "cant_find_product_or_drop_or_dead_drop": handle_not_received_drop, # Gather info, forward to admin
-    "payment_sent_no_product": handle_payment_sent_no_product, # Gather info, forward to admin
-    "dont_know_how_to_pay": handle_payment_help, # Automated response
-    "restock_request_for_product_or_location": handle_restock_info, # Automated response
-    "is_product_still_available": handle_check_product_availability, # Automated response
-    "what_is_usual_product_arrival_time": handle_product_arrival_time, # Automated response 
+    # AI gathers more info, then forwards to admin
+    "cant_find_product_or_drop_or_dead_drop": handle_not_received_drop,
+    "payment_sent_no_product": handle_payment_sent_no_product,
+
+    # Automated response
+    "dont_know_how_to_pay": handle_payment_help,
+    "restock_request_for_product_or_location": handle_restock_info,
+    "is_product_still_available": handle_check_product_availability,
+    "what_is_usual_product_arrival_time": handle_product_arrival_time, 
 
     # "👍"
     "user_says_thanks": handle_thanks,
@@ -34,7 +36,7 @@ LANGUAGES = ['lv', 'eng', 'ru', 'ee']
 
 async def handle_unforwarded_tickets(db: DatabaseController, bot: Bot):
     """
-    Periodically checks for unforwardeed tickets.
+    Periodically checks for unclosed and unforwardeed tickets (not forwarded to admin for further processing).
     For each one, runs a separate task to handle it.
 
     If ticket uncategorised (support_issue=None) then categorise the issue.
@@ -42,7 +44,6 @@ async def handle_unforwarded_tickets(db: DatabaseController, bot: Bot):
     """
     while True:
         try:
-            # HANDLE UNFORWARDED MESSAGES TO ADMIN
             active_unforwarded_tickets = await db.get_active_support_tickets(messages_forwarded=False)
 
             for ticket in active_unforwarded_tickets:
@@ -164,7 +165,85 @@ lang:category
 
 
 async def handle_categorised_ticket(db: DatabaseController, bot: Bot, ticket):
-    pass
+    """
+    Only 2 problems to handle in this scenario 
+    1. cant_find_product_or_drop_or_dead_drop
+    2. payment_sent_no_product
+
+    Before handling these, nano-gpt checks if user has is still complaining or user_says_thanks or issue_resolved_by_user
+    
+    """
+    try:
+        user_id = ticket.get("user_id")
+        user = await db.get_user_by_id(user_id)
+        messages = ticket.get("messages", [])
+        support_issue = ticket.get("support_issue")
+        lang = ticket.get("lang")
+        all_messages = []
+
+
+        if support_issue not in ["cant_find_product_or_drop_or_dead_drop", "payment_sent_no_product"]:
+            logger.error(f"Error in handle_categorised_task - wrong support issue: {support_issue}")
+            return
+        
+        unread_messages = []
+        read_messages = []
+
+        for msg in messages:
+            msg_text = msg.get("user_text")
+
+            if await is_message_deleted(bot, user_id, msg.get("message_id")):
+                await db.mark_message_as_deleted(msg.get("id"))
+                continue
+
+            if not msg.get("replied", False):
+                unread_messages.append(msg_text)
+            else:
+                read_messages.append(msg_text)
+            all_messages.append(msg_text)
+
+        if not unread_messages:
+            return  # Nothing to respond to
+
+        if len(all_messages) > 50: # Block if spam?
+            await db.set_messages_forwarded_for_ticket(ticket.get('ticket_id'))
+            await db.mute_user(user_id)
+            # await forward_ticket_to_admin(db, bot, user, ticket, lang)
+            return
+        
+        input_text = "\n".join(unread_messages)
+        prompt = f"""
+You are a message classifier.
+
+Classify the following user messages as either:
+
+- "Complaint" → if the user is reporting a problem, expressing frustration, or asking for help.
+- "Resolved" → if the user says the issue is fixed, found the answer themselves, or is thanking you.
+
+If unsure about the intent or language, default to "Complaint".
+
+User messages:
+\"\"\"{input_text}\"\"\"
+
+Respond with only one word: Complaint or Resolved.
+"""
+
+        message_classification = await query_nano_gpt(prompt)
+        
+        if message_classification.strip().lower() == 'complaint':
+            if support_issue == "cant_find_product_or_drop_or_dead_drop":
+                if any(msg in ["(photo)", "(video)", "(video_note)"] for msg in all_messages):
+                    await forward_ticket_to_admin(db, bot, user, ticket, lang)
+                else:
+                    return # If no media present (proof) then ignore the user
+            elif support_issue == "payment_sent_no_product":            
+                await forward_ticket_to_admin(db, bot, user, ticket, lang)
+        elif message_classification.strip().lower() == 'resolved':
+            await handle_thanks(db, bot, user, ticket, lang)
+
+    except Exception as e:
+        logger.error(f"Error in handle_categorised_ticket: {e}")
+
 
 async def is_message_deleted(bot: Bot, chat_id: int, message_id: int) -> bool:
     try:
