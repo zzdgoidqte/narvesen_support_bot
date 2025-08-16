@@ -2,7 +2,7 @@ import asyncio
 
 from aiogram import Bot, Dispatcher
 from handlers import register_handlers
-from handle_unforwarded_tickets import handle_unforwarded_tickets
+from handlers.bot_workflow.handle_unforwarded_tickets import handle_unforwarded_tickets
 from config.config import Config
 from controllers.db_controller import DatabaseController
 from middlewares import DatabaseMiddleware, UserMiddleware, AdminMiddleware
