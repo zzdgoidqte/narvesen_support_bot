@@ -1,7 +1,7 @@
 from aiogram import Bot
 from aiogram.types import InputMediaPhoto, FSInputFile
 from controllers.db_controller import DatabaseController
-from utils.forward_ticket_to_admin import forward_ticket_to_admin
+from handlers.bot_workflow.forward_ticket_to_admin import forward_ticket_to_admin
 import asyncio
 import random
 

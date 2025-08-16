@@ -4,7 +4,7 @@ from aiogram.exceptions import TelegramAPIError
 from datetime import datetime, timedelta, timezone
 from utils.logger import logger
 from utils.helpers import query_nano_gpt
-from utils.forward_ticket_to_admin import forward_ticket_to_admin
+from handlers.bot_workflow.forward_ticket_to_admin import forward_ticket_to_admin
 from controllers.db_controller import DatabaseController
 from handlers.automated_replies import *
 

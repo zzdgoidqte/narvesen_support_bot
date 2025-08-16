@@ -59,7 +59,6 @@ class UserMiddleware(BaseMiddleware):
 
             user_has_forwarded_and_unclosed_ticket = await self.db.get_active_support_tickets(messages_forwarded=True, user_id=user.id)
 
-
             if user_has_forwarded_and_unclosed_ticket: # Make admin respond
                 user_group_id = await self.db.get_user_group_id(user.id)
                 await self.bot.forward_message(
