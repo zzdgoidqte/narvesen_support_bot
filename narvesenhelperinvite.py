@@ -1,6 +1,6 @@
 from telethon import TelegramClient
 from telethon.errors import RPCError
-from config import Config  # Assuming your Config class is set up properly
+from config.config import Config  # Assuming your Config class is set up properly
 import asyncio
 
 async def send_intro_message():

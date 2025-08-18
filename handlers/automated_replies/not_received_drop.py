@@ -103,3 +103,5 @@ async def handle_not_received_drop(db, bot, user, ticket, lang):
     await bot.send_message(user_id, selected_variation[0])
     await asyncio.sleep(random.uniform(4, 6))
     await bot.send_message(user_id, selected_variation[1])
+    asyncio.sleep(random.uniform(4, 6))
+    await bot.send_message(user_id, selected_variation[2])
