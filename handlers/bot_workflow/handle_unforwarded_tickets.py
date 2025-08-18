@@ -1,5 +1,6 @@
 import asyncio
 import emoji
+import pytz
 from aiogram import Bot
 from aiogram.exceptions import TelegramAPIError
 from datetime import datetime, timedelta, timezone
@@ -311,9 +312,6 @@ async def is_message_deleted(bot: Bot, chat_id: int, message_id: int) -> bool:
 
 def is_emoji_only(text: str) -> bool:
     return all(char in emoji.EMOJI_DATA for char in text if not char.isspace())
-
-from datetime import datetime
-import pytz
 
 def get_time_based_message(lang: str, hour: int) -> str:
     is_late = 22 <= hour <= 23
