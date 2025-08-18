@@ -15,113 +15,114 @@ async def handle_payment_help(db, bot, user, ticket, lang):
     "lv": """
 <b>💸 Kā maksāt ar kriptovalūtu (BTC, ETH, LTC, TRX, USDT-TRC20)</b>
 
-1. Iegādājies kriptovalūtu jebkurā makā – iesakām <a href="https://www.bybit.com/">Bybit</a>.
+1. Iegādājies kriptovalūtu jebkurā makā - iesakām <a href="https://www.bybit.com/">Bybit</a>.
 
-2. Nosūti precīzu summu uz maku, ko mēs tev sniegsim pasūtījuma veikšanas laikā.
+2. Nosūti precīzu summu vai vairāk uz adresi, ko mēs tev sniegsim pasūtījuma veikšanas laikā.
 
 <b>⚠️ Ņem vērā:</b> BTC darījumi aizņem būtiski ilgāku laiku nekā citas kriptovalūtas, kas var aizkavēt pasūtījuma apstrādi.
 
-3. Kad maksājums būs apstiprināts, tu saņemsi savu pasūtījumu.
+3. Kad maksājums būs apstiprināts, bots nosūtīs tev dropu.
 """,
     "ee": """
 <b>💸 Kuidas maksta krüptoga (BTC, ETH, LTC, TRX, USDT-TRC20)</b>
 
-1. Osta krüpto ükskõik millise rahakoti kaudu – soovitame <a href="https://www.bybit.com/">Bybit</a>.
+1. Osta krüpto ükskõik millise rahakoti kaudu - soovitame <a href="https://www.bybit.com/">Bybit</a>.
 
-2. Saada täpne summa aadressile, mille anname tellimuse esitamisel.
+2. Saada täpne summa või rohkem aadressile, mille anname tellimuse esitamisel.
 
 <b>⚠️ Pane tähele:</b> BTC tehingud võtavad märgatavalt kauem aega kui muud krüptod ja võivad põhjustada viivitusi tellimuse kinnitamisel.
 
-3. Kui makse on kinnitatud, saad oma tellimuse.
+3. Kui makse on kinnitatud, saadab bot sulle dropi.
 """,
     "ru": """
 <b>💸 Как оплатить криптовалютой (BTC, ETH, LTC, TRX, USDT-TRC20)</b>
 
-1. Купите криптовалюту в любом кошельке — мы рекомендуем <a href="https://www.bybit.com/">Bybit</a>.
+1. Купите криптовалюту в любом кошельке - мы рекомендуем <a href="https://www.bybit.com/">Bybit</a>.
 
-2. Отправьте точную сумму на адрес, который мы вам дадим при оформлении заказа.
+2. Отправьте точную сумму или больше на адрес, который мы вам дадим при оформлении заказа.
 
 <b>⚠️ Обратите внимание:</b> Транзакции в BTC обрабатываются значительно дольше, чем в других валютах, что может задержать ваш заказ.
 
-3. После подтверждения оплаты вы получите свой заказ.
+3. После подтверждения оплаты бот отправит вам дроп.
 """,
     "eng": """
 <b>💸 How to Pay with Crypto (BTC, ETH, LTC, TRX, USDT-TRC20)</b>
 
-1. Buy crypto using any wallet – we recommend <a href="https://www.bybit.com/">Bybit</a>.
+1. Buy crypto using any wallet - we recommend <a href="https://www.bybit.com/">Bybit</a>.
 
-2. Send the exact amount to the wallet address we give you when you make an order.
+2. Send the exact amount or more to the wallet address we give you when you make an order.
 
 <b>⚠️ Note:</b> BTC transactions take significantly longer to process than other cryptocurrencies and may delay your order.
 
-3. Once confirmed, you’ll get your order.
+3. Once the payment is confirmed, the bot will send you the drop.
 """
-    }
+}
+
 
 
     # --- Localized card payment instructions ---
     card_payment_captions = {
-        "lv": """
+    "lv": """
 <b>💳 Kā maksāt ar karti</b>
 
-1. Nokopē adresi, kuru mēs nosūtīsim.
+1. Nokopē adresi, kuru tev nosūtīs bots.
 
 2. Ej uz <a href="https://exchange.mercuryo.io/">exchange.mercuryo.io</a>.
 
-3. Izvēlies LTC, ievadi summu "You get" laukā, spied "Buy". Pēc tam ielīmē mūsu adresi un ievadi kartes datus.
+3. Izvēlies LTC, ievadi "Payment amount" summu "You get" laukā, spied "Buy". Pēc tam ievieto adresi, kuru nosūtīja bots un ievadi kartes datus.
 
-✅ Kad mēs saņemam maksājumu, pasūtījums tiek izsūtīts.
+✅ Kad maksājums būs apstiprināts, bots nosūtīs tev dropu.
 
-<b>🔒 Piezīme:</b> Mercuryo nav mūsu īpašumā - tava informācija paliek privāta.
+<b>🔒 Piezīme:</b> Mercuryo nav mūsu īpašumā - tava informācija paliek privāta. Ja gadījumā rodas problēmas saistībā ar Mercuryo, kontaktējies ar viņu atbalsta komandu, nevis mums. Mēs neesam atbildīgi par Mercuryo samaksas problēmām un kavējumiem!
 
 ⚠️ Apmaiņas maksa tiek piemērota. Kriptomaksājumi ir lētāki un ātrāki!
 """,
-        "ee": """
+    "ee": """
 <b>💳 Kuidas maksta kaardiga</b>
 
-1. Kopeeri aadress, mille me saadame.
+1. Kopeeri aadress, mille saadab sulle bot.
 
 2. Mine lehele <a href="https://exchange.mercuryo.io/">exchange.mercuryo.io</a>.
 
-3. Vali LTC, sisesta summa lahtrisse "You get", vajuta "Buy". Seejärel kleebi aadress ja sisesta kaardiandmed.
+3. Vali LTC, sisesta "Payment amount" summa lahtrisse "You get", vajuta "Buy". Seejärel kleebi aadress, mille saatis bot, ja sisesta kaardiandmed.
 
-✅ Kui me saame makse kätte, saadetakse sinu tellimus.
+✅ Kui makse on kinnitatud, saadab bot sulle tellimuse.
 
-<b>🔒 Märkus:</b> Mercuryo ei kuulu meile - sinu andmed jäävad konfidentsiaalseks.
+<b>🔒 Märkus:</b> Mercuryo ei kuulu meile - sinu info jääb konfidentsiaalseks. Kui tekib probleeme Mercuryoga, võta ühendust nende klienditoega, mitte meiega. Me ei vastuta makseviivituste või probleemide eest Mercuryo platvormil!
 
-⚠️ Võib lisanduda vahetustasu. Krüptoga on odavam ja kiirem!
+⚠️ Vahetustasu võib lisanduda. Krüptoga on odavam ja kiirem!
 """,
-        "ru": """
+    "ru": """
 <b>💳 Как оплатить картой</b>
 
-1. Скопируйте адрес, который мы отправим.
+1. Скопируйте адрес, который отправит вам бот.
 
-2. Перейдите на <a href="https://exchange.mercuryo.io/">exchange.mercuryo.io</a>.
+2. Перейдите на сайт <a href="https://exchange.mercuryo.io/">exchange.mercuryo.io</a>.
 
-3. Выберите LTC, введите сумму в поле "You get", нажмите "Buy". Затем вставьте наш адрес и введите данные карты.
+3. Выберите LTC, введите сумму из "Payment amount" в поле "You get", нажмите "Buy". Затем вставьте адрес, который отправил бот, и введите данные карты.
 
-✅ После получения оплаты мы отправим ваш заказ.
+✅ Когда оплата будет подтверждена, бот отправит вам дроп.
 
-<b>🔒 Примечание:</b> Mercuryo нам не принадлежит - ваша информация остается конфиденциальной.
+<b>🔒 Примечание:</b> Mercuryo не принадлежит нам - ваша информация остаётся конфиденциальной. Если возникнут проблемы с Mercuryo, обращайтесь в их службу поддержки, а не к нам. Мы не несём ответственности за задержки и проблемы с оплатой на стороне Mercuryo!
 
-⚠️ Комиссии биржи применимы. Криптовалюта дешевле и быстрее!
+⚠️ Взимается комиссия обмена. Оплата криптовалютой дешевле и быстрее!
 """,
-        "eng": """
+    "eng": """
 <b>💳 How to Pay with Card</b>
 
-1. Copy the wallet address we send.
+1. Copy the wallet address sent to you by the bot.
 
 2. Go to <a href="https://exchange.mercuryo.io/">exchange.mercuryo.io</a>.
 
-3. Pick LTC, paste the LTC amount under "You get", click buy. Then paste in the wallet address. Then enter your card details and pay.
+3. Select LTC, enter the "Payment amount" number into the "You get" field, click "Buy". Then paste the address sent by the bot and enter your card details.
 
-✅ Once we get the crypto, your order is sent.
+✅ Once the payment is confirmed, the bot will send you the drop.
 
-<b>🔒 Note:</b> We don’t own Mercuryo - your info stays private.
+<b>🔒 Note:</b> Mercuryo is not owned by us - your information remains private. If you have issues with Mercuryo, contact their support team, not us. We're not responsible for delays or payment problems on their side!
 
-⚠️ Exchange fees apply. Crypto payments are cheaper & faster!
+⚠️ Exchange fees apply. Crypto payments are cheaper and faster!
 """
-    }
+}
 
     # --- Get texts by language ---
     crypto_text = crypto_guides.get(lang, crypto_guides["eng"])

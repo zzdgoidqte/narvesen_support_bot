@@ -219,6 +219,31 @@ async def handle_categorised_ticket(db: DatabaseController, bot: Bot, ticket):
             # await forward_ticket_to_admin(db, bot, user, ticket, lang)
             return
         
+
+        message_variations_courier = {
+            "lv": "Mēs sazināsimies ar kurjeriem un visu pārbaudīsim -drīzumā atgriezīsimies ar atbildi.",
+            "ee": "Võtame ühendust kulleritega ja kontrollime kõike üle -anname peagi teada.",
+            "ru": "Мы свяжемся с курьерами и всё проверим — скоро дадим ответ.",
+            "eng": "We will check in with our couriers and review everything — we’ll get back to you shortly."
+        }
+        if support_issue == "cant_find_product_or_drop_or_dead_drop" and any(
+            msg in ["(photo)", "(video)", "(video_note)"] for msg in all_messages
+        ):
+            message_main = message_variations_courier.get(lang, message_variations_courier["eng"])
+            await bot.send_message(user_id, message_main)
+
+            # Check Helsinki time
+            helsinki_time = datetime.now(pytz.timezone("Europe/Helsinki"))
+            hour = helsinki_time.hour
+
+            if hour >= 22 or hour < 7:
+                message_time = get_time_based_message(lang, hour)
+                await bot.send_message(user_id, message_time)
+
+            await forward_ticket_to_admin(db, bot, user, ticket, lang)
+            return
+
+
         input_text = "\n".join(unread_messages)
         prompt = f"""
 You are a message classifier.
@@ -240,10 +265,18 @@ Respond with only one word: Complaint or Resolved.
         
         if message_classification.strip().lower() == 'complaint':
             if support_issue == "cant_find_product_or_drop_or_dead_drop":
-                # if any(msg in ["(photo)", "(video)", "(video_note)"] for msg in all_messages):
+                message_main = message_variations_courier.get(lang, message_variations_courier["eng"])
+                await bot.send_message(user_id, message_main)
+
+                # Check Helsinki time
+                helsinki_time = datetime.now(pytz.timezone("Europe/Helsinki"))
+                hour = helsinki_time.hour
+
+                if hour >= 22 or hour < 7:
+                    message_time = get_time_based_message(lang, hour)
+                    await bot.send_message(user_id, message_time)
+
                 await forward_ticket_to_admin(db, bot, user, ticket, lang)
-                # else:
-                #     return # If no media present (proof) then ignore the user
         elif message_classification.strip().lower() == 'resolved':
             await handle_thanks(db, bot, user, ticket, lang)
 
@@ -278,3 +311,31 @@ async def is_message_deleted(bot: Bot, chat_id: int, message_id: int) -> bool:
 
 def is_emoji_only(text: str) -> bool:
     return all(char in emoji.EMOJI_DATA for char in text if not char.isspace())
+
+from datetime import datetime
+import pytz
+
+def get_time_based_message(lang: str, hour: int) -> str:
+    is_late = 22 <= hour <= 23
+    is_early = 0 <= hour < 7
+
+    if lang == "lv":
+        return (
+            "Ņemot vērā, ka ir ļoti vēls, šobrīd nevaram garantēt tūlītēju risinājumu." if is_late else
+            "Ņemot vērā, ka ir ļoti agrs rīts, šobrīd nevaram garantēt tūlītēju risinājumu."
+        )
+    elif lang == "ee":
+        return (
+            "Kuna on väga hiline aeg, ei saa me praegu lahendust garanteerida." if is_late else
+            "Kuna on väga varajane hommik, ei saa me praegu lahendust garanteerida."
+        )
+    elif lang == "ru":
+        return (
+            "Сейчас очень поздно, поэтому мы не можем гарантировать быстрое решение." if is_late else
+            "Сейчас очень рано утром, поэтому мы не можем гарантировать быстрое решение."
+        )
+    else:  # eng or fallback
+        return (
+            "Since it is very late, we can't guarantee to resolve the issue right now." if is_late else
+            "Since it is very early in the morning, we can't guarantee to resolve the issue right now."
+        )
