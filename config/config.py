@@ -16,7 +16,7 @@ class Config:
     DB_MAX_OVERFLOW = int(os.getenv("DB_MAX_OVERFLOW", 10))  
 
     BOT_USERNAME = os.getenv("BOT_USERNAME") # retrieve from db
-    SUPPORT_ADMIN_ID = 7751665530 # Replace @guncha420 with @NarvesenSupport (retreive from db)    
+    SUPPORT_ADMIN_ID = 7751665530 # @guncha420 for testing
 
     BOT_ADMIN_SESSION_API_ID = os.getenv("BOT_ADMIN_SESSION_API_ID")
     BOT_ADMIN_SESSION_API_HASH = os.getenv("BOT_ADMIN_SESSION_API_HASH")
