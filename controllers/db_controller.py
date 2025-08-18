@@ -937,3 +937,39 @@ class DatabaseController:
         except Exception as e:
             logger.error(f"Unexpected error while setting category/lang for ticket {ticket_id}: {e}")
             raise
+
+
+    async def get_previous_users_category_key(self, user_id: int) -> Optional[str]:
+        """
+        Retrieve the support_issue of the second latest ticket for a given user.
+
+        Args:
+            user_id (int): The ID of the user.
+
+        Returns:
+            Optional[str]: The support_issue of the second latest ticket, or None if not found.
+        """
+        try:
+            async with self.pool.acquire() as conn:
+                row = await conn.fetchrow(
+                    """
+                    SELECT support_issue
+                    FROM support_tickets
+                    WHERE user_id = $1
+                    ORDER BY created_at DESC, ticket_id DESC
+                    OFFSET 1
+                    LIMIT 1
+                    """,
+                    user_id
+                )
+
+                if row:
+                    return row["support_issue"]
+                return None
+
+        except PostgresError as e:
+            logger.error(f"Database error while retrieving second latest ticket for user {user_id}: {e}")
+            raise
+        except Exception as e:
+            logger.error(f"Unexpected error while retrieving second latest ticket for user {user_id}: {e}")
+            raise

@@ -104,18 +104,18 @@ async def categorise_ticket(db: DatabaseController, bot: Bot, ticket):
 
         # Special media-only cases
         if all(msg in ["(photo)", "(video)", "(video_note)"] for msg in unread_messages):
-            category_key = 'media'
+            category_key = 'other'
             lang = 'other'
             await db.set_lang_and_category_for_ticket(category_key, lang, ticket.get('ticket_id'))
             await forward_ticket_to_admin(db, bot, user, ticket, lang)
             return
-        elif all(msg == "(voice)" for msg in unread_messages):
+        elif all(msg in ["(voice)", "(audio)"] for msg in unread_messages):
             category_key = 'voice_message'
             lang = 'other'
             await db.set_lang_and_category_for_ticket(category_key, lang, ticket.get('ticket_id'))
             await handle_voice_message(db, bot, user, ticket, lang)
             return
-        elif all(is_emoji_only(msg) or msg == '(sticker)' for msg in unread_messages):
+        elif all(is_emoji_only(msg) or msg in ["(sticker)", "(animation)", "(document)", "(other)"] for msg in unread_messages):
             await db.close_support_ticket(ticket.get('ticket_id'))
             return
 
@@ -161,8 +161,14 @@ lang:category
         # Check if it's a valid handler key
         handler_func = USER_CONVERSATIONS[category_key]
 
-        if handler_func:
-            await bot.send_message(user_id, f"LOGGING\nDetected category: {category_key}\nLanguage: {lang}")
+        if handler_func:    
+            if category_key not in ["cant_find_product_or_drop_or_dead_drop", "other", "wrong_drop_info", "payment_sent_no_product", "less_product_received_than_expected", "kladmen_or_packaging_complaint", "opinion_or_info_question"]:
+                previous_users_category_key = await db.get_previous_users_category_key(user_id)
+                # Close ticket and dont reply if user spamming the same question.
+                if category_key == previous_users_category_key:
+                    await db.close_support_ticket(ticket.get('ticket_id'))
+                    return
+            await bot.send_message(user_id, f"LOGGING\nDetected category: {category_key}\nLanguage: {lang}") # TODO TEMPORARY LOGGING, DELETE LATER
             await db.set_lang_and_category_for_ticket(category_key, lang, ticket.get('ticket_id'))
             if category_key == "cant_find_product_or_drop_or_dead_drop": # Lost drop with proof
                 if any(msg in ["(photo)", "(video)", "(video_note)"] for msg in unread_messages):
@@ -273,7 +279,7 @@ Respond with only one word: Complaint or Resolved.
                 helsinki_time = datetime.now(pytz.timezone("Europe/Helsinki"))
                 hour = helsinki_time.hour
 
-                if hour >= 22 or hour < 7:
+                if hour >= 22 or hour < 10:
                     message_time = get_time_based_message(lang, hour)
                     await bot.send_message(user_id, message_time)
 
