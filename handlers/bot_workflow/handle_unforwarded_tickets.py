@@ -67,7 +67,7 @@ async def handle_unforwarded_tickets(db: DatabaseController, bot: Bot):
                     continue
 
                 # Reply to user if his latest message was more than 2 minutes ago
-                if time_diff > timedelta(seconds=20): # Placeholer 20sec for testing
+                if time_diff > timedelta(seconds=10): # TODO Placeholer 10sec for testing
                     # Mark as handled
                     await db.mark_messages_as_replied(ticket_id)
                     if not support_issue:
@@ -113,7 +113,12 @@ async def categorise_ticket(db: DatabaseController, bot: Bot, ticket):
             category_key = 'voice_message'
             lang = 'other'
             await db.set_lang_and_category_for_ticket(category_key, lang, ticket.get('ticket_id'))
-            await handle_voice_message(db, bot, user, ticket, lang)
+            prev_support_issue = await db.get_previous_users_category_key(user_id)
+            await db.close_support_ticket(ticket.get('ticket_id'))
+            if not prev_support_issue in ["(voice)", "(audio)"]:
+                await handle_voice_message(db, bot, user, ticket, lang)
+            else:
+                await bot.send_message(user_id, "LOGGING\n not sending resoponse because previous user question was the same")  # TODO TEMPORARY LOGGING, DELETE LATER 
             return
         elif all(is_emoji_only(msg) or msg in ["(sticker)", "(animation)", "(document)", "(other)"] for msg in unread_messages):
             await db.close_support_ticket(ticket.get('ticket_id'))
@@ -139,7 +144,7 @@ Respond **only** in this format (no extra explanation):
 lang:category
 """
         
-        lang_and_category_key = await query_nano_gpt(prompt)
+        lang_and_category_key = await query_nano_gpt(prompt, max_tokens=30)
 
         if ':' in lang_and_category_key:
             lang, category_key = lang_and_category_key.strip().split(':', 1)
@@ -166,6 +171,7 @@ lang:category
                 previous_users_category_key = await db.get_previous_users_category_key(user_id)
                 # Close ticket and dont reply if user spamming the same question.
                 if category_key == previous_users_category_key:
+                    await bot.send_message(user_id, "LOGGING\n not sending resoponse because previous user question was the same")  # TODO TEMPORARY LOGGING, DELETE LATER
                     await db.close_support_ticket(ticket.get('ticket_id'))
                     return
             await bot.send_message(user_id, f"LOGGING\nDetected category: {category_key}\nLanguage: {lang}") # TODO TEMPORARY LOGGING, DELETE LATER
@@ -228,10 +234,10 @@ async def handle_categorised_ticket(db: DatabaseController, bot: Bot, ticket):
         
 
         message_variations_courier = {
-            "lv": "Mēs sazināsimies ar kurjeriem un visu pārbaudīsim -drīzumā atgriezīsimies ar atbildi.",
-            "ee": "Võtame ühendust kulleritega ja kontrollime kõike üle -anname peagi teada.",
-            "ru": "Мы свяжемся с курьерами и всё проверим — скоро дадим ответ.",
-            "eng": "We will check in with our couriers and review everything — we’ll get back to you shortly."
+            "lv": "Mēs sazināsimies ar kurjeriem un visu pārbaudīsim, atgriezīsimies ar atbildi.",
+            "ee": "Võtame ühendust kulleritega ja kontrollime kõike üle, anname peagi teada.",
+            "ru": "Мы свяжемся с курьерами и всё проверим, дадим ответ.",
+            "eng": "We will check in with our couriers and review everything, we’ll get back to you."
         }
         if support_issue == "cant_find_product_or_drop_or_dead_drop" and any(
             msg in ["(photo)", "(video)", "(video_note)"] for msg in all_messages
