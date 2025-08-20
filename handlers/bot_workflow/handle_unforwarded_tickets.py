@@ -144,7 +144,7 @@ Respond **only** in this format (no extra explanation):
 lang:category
 """
         
-        lang_and_category_key = await query_nano_gpt(prompt, max_tokens=30)
+        lang_and_category_key = await query_nano_gpt(prompt)
 
         if ':' in lang_and_category_key:
             lang, category_key = lang_and_category_key.strip().split(':', 1)

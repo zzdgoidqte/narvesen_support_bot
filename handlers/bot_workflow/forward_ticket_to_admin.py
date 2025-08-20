@@ -108,7 +108,7 @@ async def create_user_group(db: DatabaseController, client: TelegramClient, bot:
         # Get bot and user entities
         bot_entity = await client.get_entity(Config.BOT_USERNAME)
         if Config.DEVELOPMENT_MODE:
-            admin_entity = await client.get_entity(Config.SUPPORT_ADMIN_ID)
+            admin_entity = await client.get_entity(Config.SUPPORT_ADMIN_USERNAME)
         else:
             bot_settings = await db.get_bot_settings()
             support_username = bot_settings.get('support_username')

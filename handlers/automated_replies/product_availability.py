@@ -32,7 +32,7 @@ Message 2:
 """
 
     # Ask AI to handle both messages
-    ai_response = await query_nano_gpt(prompt, max_tokens=250)
+    ai_response = await query_nano_gpt(prompt)
 
     if ai_response:
         ai_response = ai_response.replace("\\n", "\n")

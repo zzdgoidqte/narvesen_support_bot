@@ -5,13 +5,13 @@ from utils.logger import logger
 
 
 
-async def query_nano_gpt(prompt: str, model: str = "yi-lightning", temperature: float = 0.0, max_tokens: int = 80) -> str | None:
+async def query_nano_gpt(prompt: str, model: str = "gpt-5-mini", temperature: float = 0.0, max_tokens: int = 500) -> str | None:
     """
     Sends a prompt to the Nano-GPT API and returns the model's response.
 
     Args:
         prompt (str): The prompt to send.
-        model (str): The model to use. Default is 'yi-lightning'. (gpt-4o-mini was not as percise in my tests)
+        model (str): The model to use. Default is 'gpt-5-mini'. (gpt-4o-mini and yi-lightning was not as percise in my tests)
         temperature (float): Sampling temperature. (How creative is the model response)
         max_tokens (int): Max tokens to generate. (For simple single sentence output can limit to small amount of tokens)
 

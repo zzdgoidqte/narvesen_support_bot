@@ -36,7 +36,7 @@ Message 3:
 \"\"\"{message3_lv}\"\"\"
 """
 
-    ai_response = await query_nano_gpt(prompt, max_tokens=250)
+    ai_response = await query_nano_gpt(prompt)
 
     fallback_variations = {
         "lv": [
