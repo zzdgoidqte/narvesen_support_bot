@@ -146,12 +146,14 @@ async def create_user_group(db: DatabaseController, client: TelegramClient, bot:
         except Exception as e:
             logger.warning(f"Failed to set group description: {e}")
 
-        # Set groups profile pic
+        
+        # Set group profile pic using a local file
         try:
-            photo_file = await client.download_profile_photo(user_id, file=f"data/temp/{user_id}_profile.jpg")
-            if photo_file:
-                logger.info(f"Downloaded user profile photo to: {photo_file}")
-                uploaded_file = await client.upload_file(photo_file)
+            photo_path = "data/warning.jpg"
+
+            if os.path.exists(photo_path):
+                logger.info(f"Using local photo: {photo_path}")
+                uploaded_file = await client.upload_file(photo_path)
                 input_photo = InputChatUploadedPhoto(uploaded_file)
 
                 # Set the new group photo
@@ -159,10 +161,9 @@ async def create_user_group(db: DatabaseController, client: TelegramClient, bot:
                     chat_id=group_entity.id,
                     photo=input_photo
                 ))
-                # Delete the local file after use
-                if os.path.exists(photo_file):
-                    os.remove(photo_file)
-
+            else:
+                logger.error(f"Local photo not found: {photo_path}")
+                
         except Exception as e:
             logger.warning(f"Failed to set group profile picture: {e}")
             
