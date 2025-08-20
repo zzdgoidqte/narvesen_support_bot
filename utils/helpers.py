@@ -5,7 +5,7 @@ from utils.logger import logger
 
 
 
-async def query_nano_gpt(prompt: str, model: str = "gpt-5-mini", temperature: float = 0.0, max_tokens: int = 500) -> str | None:
+async def query_nano_gpt(prompt: str, model: str = "gpt-5-mini", temperature: float = 0.0, max_tokens: int = 1000) -> str | None:
     """
     Sends a prompt to the Nano-GPT API and returns the model's response.
 
