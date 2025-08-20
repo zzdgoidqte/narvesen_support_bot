@@ -91,6 +91,10 @@ async def forward_ticket_to_admin(db: DatabaseController, bot: Bot, user, ticket
         )
     except Exception as e:
         logger.error(f"Error making the group or forwarding the messages to group: {e}")
+        await bot.send_message(
+            chat_id=user_group_id,
+            text=f"ERROR FORWARDING USER TICKET TO THIS GROUP:\n{e}"
+        )
     finally:
         # Ensure Telethon client is disconnected to avoid session issues
         if client.is_connected():
@@ -170,6 +174,13 @@ async def create_user_group(db: DatabaseController, client: TelegramClient, bot:
         return group_id
 
     except Exception as e:
+        bot_settings = await db.get_bot_settings()
+        raw_username = bot_settings.get('support_username', '')
+        support_username = raw_username if raw_username.startswith('@') else '@' + raw_username
+        await bot.send_message(
+            chat_id=support_username,
+            text=f"ERROR CREATING USER GROUP WITH USER {user_id}, {group_name}:\n{e}"
+        )
         logger.error(f"Failed to create group for user {user_id}: {e}")
         raise
 
