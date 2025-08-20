@@ -1,0 +1,20 @@
+{
+  "session_file": "+15485990165",
+  "phone": "+15485990165",
+  "register_time": 1719934156.8621612,
+  "app_id": "890254",
+  "app_hash": "c7f054a4d5bd7723edafb0841246bdc8",
+  "sdk": "SDK 22",
+  "app_version": "7.9",
+  "device": "Oppo A73",
+  "lang_pack": "en",
+  "proxy": "null",
+  "last_check_time": 0,
+  "success_registred": true,
+  "first_name": "Sagar",
+  "last_name": "a",
+  "twoFA": "18943",
+  "bots": [
+    "@narvesen13bot"
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "session_file": "+15485990657",
+  "phone": "+15485990657",
+  "register_time": 1719930613.2202272,
+  "app_id": "890254",
+  "app_hash": "c7f054a4d5bd7723edafb0841246bdc8",
+  "sdk": "SDK 22",
+  "app_version": "8.9",
+  "device": "LG K52",
+  "lang_pack": "en",
+  "proxy": "null",
+  "last_check_time": 0,
+  "success_registred": true,
+  "first_name": "Fariyad",
+  "last_name": "a",
+  "twoFA": "23086",
+  "bots": [
+    "@narvesen21bot"
+  ]
+}

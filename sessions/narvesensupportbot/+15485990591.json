@@ -1,0 +1,20 @@
+{
+  "session_file": "+15485990591",
+  "phone": "+15485990591",
+  "register_time": 1719935199.09612,
+  "app_id": "719702",
+  "app_hash": "8e6bfe1924b2f4da80b81c379bda7d78",
+  "sdk": "SDK 22",
+  "app_version": "8.4",
+  "device": "Samsung Galaxy A40",
+  "lang_pack": "en",
+  "proxy": "null",
+  "last_check_time": 0,
+  "success_registred": true,
+  "first_name": "Durgesh",
+  "last_name": "u",
+  "twoFA": "71803",
+  "bots": [
+    "@narvesen_247_bot"
+  ]
+}

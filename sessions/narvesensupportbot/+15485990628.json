@@ -1,0 +1,20 @@
+{
+  "session_file": "+15485990628",
+  "phone": "+15485990628",
+  "register_time": 1719926094.8043556,
+  "app_id": "224312",
+  "app_hash": "2738dd0534b46112cc46941634f21907",
+  "sdk": "SDK 25",
+  "app_version": "8.9",
+  "device": "Xiaomi Mi 10T Lite 5G",
+  "lang_pack": "en",
+  "proxy": "null",
+  "last_check_time": 0,
+  "success_registred": true,
+  "first_name": "Sanjay",
+  "last_name": "a",
+  "twoFA": "74324",
+  "bots": [
+    "@narvesen19bot"
+  ]
+}
