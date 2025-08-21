@@ -1,7 +1,6 @@
 from aiogram import Bot
 from telethon import TelegramClient
-from telethon.tl.functions.messages import CreateChatRequest, EditChatTitleRequest, EditChatAboutRequest, EditChatPhotoRequest, EditChatAdminRequest
-from telethon.tl.functions.contacts import AddContactRequest
+from telethon.tl.functions.messages import CreateChatRequest, EditChatAboutRequest, EditChatPhotoRequest, EditChatAdminRequest
 from telethon.tl.types import InputChatUploadedPhoto
 from utils.logger import logger
 from controllers.db_controller import DatabaseController
@@ -42,28 +41,8 @@ async def forward_ticket_to_admin(db: DatabaseController, bot: Bot, user, ticket
 
         if not user_group_id:
             user_group_id = await create_user_group(db, client, bot, user)
-        else:
-            # Check if user has updated his username or first_name in db
-            expented_group_title = first_name + (" " + last_name if last_name else "")
-
-            # Extract the current title from the title
-            group_entity = await client.get_entity(user_group_id)
-            current_title = group_entity.title
-
-            if current_title != expented_group_title:
-                # Rename the group to match the updated username/first name
-                try:
-                    await client(EditChatTitleRequest(
-                        chat_id=group_entity.id,
-                        title=expented_group_title
-                    ))
-                    logger.info(f"Renamed group to '{expented_group_title}'")
-                except Exception as e:
-                    logger.warning(f"Failed to rename group: {e}")
 
         if user_group_id:
-            group_entity = await client.get_entity(user_group_id)
-            user_group_id = group_entity.id
             await db.set_messages_forwarded_for_ticket(ticket.get('ticket_id'))
             ticket = await db.get_ticket(ticket.get('ticket_id'))
             # Call a /ask at the start of ticket
@@ -392,7 +371,7 @@ async def get_available_session(db: DatabaseController, session_dir: str, group_
                 await client.disconnect()
                 continue
 
-            logger.info(f"Using session {session_name} (created {group_count} groups)")
+            logger.info(f"Using session {session_name} ({group_count} existing groups for this session)")
             return client
 
         except Exception as e:

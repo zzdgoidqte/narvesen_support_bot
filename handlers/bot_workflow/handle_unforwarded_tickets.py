@@ -68,7 +68,7 @@ async def handle_unforwarded_tickets(db: DatabaseController, bot: Bot):
                     continue
 
                 # Reply to user if his latest message was more than 2 minutes ago
-                if time_diff > timedelta(seconds=10): # TODO Placeholer 10sec for testing
+                if time_diff > timedelta(seconds=5): # TODO Placeholer 5sec for testing
                     # Mark as handled
                     await db.mark_messages_as_replied(ticket_id)
                     if not support_issue:
