@@ -3,7 +3,7 @@ import asyncpg
 from aiogram import Bot
 from asyncpg.exceptions import PostgresError
 from datetime import datetime, timezone, timedelta
-from typing import Optional, Dict
+from typing import Optional, Dict, List, Tuple
 
 from config.config import Config
 from utils.logger import logger
@@ -764,24 +764,26 @@ class DatabaseController:
             logger.error(f"Unexpected error marking messages as replied for ticket {ticket_id}: {e}")
             raise
 
-    async def set_user_group_id(self, user_id: int, group_id: int) -> None:
+    async def set_user_group_id(self, user_id: int, group_id: int, created_by: str) -> None:
         """
-        Sets or updates the group ID associated with a user.
+        Sets or updates the group ID and creator associated with a user.
 
         Args:
             user_id (int): Telegram user ID.
             group_id (int): Telegram group ID (must be a negative long integer).
+            created_by (str): Session name or identifier that created the group.
         """
         try:
             async with self.pool.acquire() as conn:
                 query = """
-                    INSERT INTO support_group_ids (user_id, group_id)
-                    VALUES ($1, $2)
+                    INSERT INTO support_group_ids (user_id, group_id, created_by)
+                    VALUES ($1, $2, $3)
                     ON CONFLICT (user_id)
-                    DO UPDATE SET group_id = EXCLUDED.group_id
+                    DO UPDATE SET group_id = EXCLUDED.group_id,
+                                  created_by = EXCLUDED.created_by
                 """
-                await conn.execute(query, user_id, group_id)
-                logger.debug(f"Set group_id {group_id} for user_id {user_id}")
+                await conn.execute(query, user_id, group_id, created_by)
+                logger.debug(f"Set group_id {group_id} and created_by '{created_by}' for user_id {user_id}")
         except Exception as e:
             logger.error(f"Failed to set group_id for user_id {user_id}: {e}")
             raise
@@ -973,3 +975,84 @@ class DatabaseController:
         except Exception as e:
             logger.error(f"Unexpected error while retrieving second latest ticket for user {user_id}: {e}")
             raise
+
+    async def count_of_groups_created_by(self, created_by: str) -> int:
+            """
+            Counts the number of rows in support_group_ids where created_by matches the given value.
+
+            Args:
+                created_by (str): The value to match in the created_by column.
+
+            Returns:
+                int: The number of matching rows.
+            """
+            try:
+                async with self.pool.acquire() as conn:
+                    query = """
+                        SELECT COUNT(*) FROM support_group_ids
+                        WHERE created_by = $1
+                    """
+                    count = await conn.fetchval(query, created_by)
+                    logger.debug(f"Found {count} rows where created_by = '{created_by}'")
+                    return count
+            except Exception as e:
+                logger.error(f"Error counting rows by created_by = '{created_by}': {e}")
+                raise
+
+    async def get_user_open_tickets(self, user_id: int) -> list:
+        """
+        Returns a list of open support tickets for a given user.
+        """
+        try:
+            async with self.pool.acquire() as conn:
+                return await conn.fetch("""
+                    SELECT * FROM support_tickets
+                    WHERE user_id = $1 AND is_closed = false
+                """, user_id)
+        except Exception as e:
+            logger.error(f"Error fetching open tickets for user_id {user_id}: {e}")
+            return []
+
+    async def get_user_latest_ticket_date(self, user_id: int) -> Optional[datetime]:
+        """
+        Returns the latest created_at datetime for a user's tickets.
+        """
+        try:
+            async with self.pool.acquire() as conn:
+                result = await conn.fetchrow("""
+                    SELECT MAX(created_at) as latest FROM support_tickets
+                    WHERE user_id = $1
+                """, user_id)
+                return result["latest"] if result and result["latest"] else None
+        except Exception as e:
+            logger.error(f"Error getting latest ticket date for user_id {user_id}: {e}")
+            return None
+
+    async def delete_support_group(self, user_id: int) -> None:
+        """
+        Deletes the support group entry for a given user_id.
+        """
+        try:
+            async with self.pool.acquire() as conn:
+                await conn.execute("""
+                    DELETE FROM support_group_ids
+                    WHERE user_id = $1
+                """, user_id)
+                logger.info(f"Deleted support group for user_id {user_id}")
+        except Exception as e:
+            logger.error(f"Error deleting support group for user_id {user_id}: {e}")
+
+
+    async def get_all_support_groups_with_creator(self) -> List[Tuple[int, int, Optional[str]]]:
+        """
+        Returns a list of (user_id, group_id, created_by) from support_group_ids.
+        """
+        try:
+            async with self.pool.acquire() as conn:
+                rows = await conn.fetch("""
+                    SELECT user_id, group_id, created_by FROM support_group_ids
+                """)
+                return [(row['user_id'], row['group_id'], row['created_by']) for row in rows]
+        except Exception as e:
+            logger.error(f"Error fetching support groups with creator: {e}")
+            return []

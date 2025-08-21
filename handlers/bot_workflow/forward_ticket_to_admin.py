@@ -1,23 +1,35 @@
 from aiogram import Bot
 from telethon import TelegramClient
 from telethon.tl.functions.messages import CreateChatRequest, EditChatTitleRequest, EditChatAboutRequest, EditChatPhotoRequest, EditChatAdminRequest
+from telethon.tl.functions.contacts import AddContactRequest
 from telethon.tl.types import InputChatUploadedPhoto
 from utils.logger import logger
 from controllers.db_controller import DatabaseController
 from config.config import Config
 from utils.helpers import escape_markdown_v1
-from keyboards import inline
+from keyboards.inline import close_ticket
 import os
+import random
+import json
 
 async def forward_ticket_to_admin(db: DatabaseController, bot: Bot, user, ticket, lang):
     try:
         # Initialize Telethon client
-        api_id = Config.BOT_ADMIN_SESSION_API_ID
-        api_hash = Config.BOT_ADMIN_SESSION_API_HASH
-        session_path = "sessions/narvesensupportbot/+15876662080.session"
-        client = TelegramClient(session_path, api_id, api_hash)
+        session_dir = "sessions/narvesensupportbot"
+        client = await get_available_session(db, session_dir)
 
         # Start Telethon client if not already started
+        if not client:
+            logger.error("Failed to forward ticket to admin - No suitable session found (all are either unauthorized, failed, or hit group limit).")
+            bot_settings = await db.get_bot_settings()
+            raw_username = bot_settings.get('support_username', '')
+            support_username = raw_username if raw_username.startswith('@') else '@' + raw_username
+            await bot.send_message(
+                chat_id=support_username,
+                text=f"ERROR: Failed to forward ticket to admin - No suitable session found (all are either unauthorized, failed, or hit group limit).\n{e}"
+            )
+            return
+        
         if not client.is_connected():
             await client.start()
 
@@ -34,7 +46,7 @@ async def forward_ticket_to_admin(db: DatabaseController, bot: Bot, user, ticket
             # Check if user has updated his username or first_name in db
             expented_group_title = first_name + (" " + last_name if last_name else "")
 
-            # Extract the current title from the title (before the user_id)
+            # Extract the current title from the title
             group_entity = await client.get_entity(user_group_id)
             current_title = group_entity.title
 
@@ -63,7 +75,7 @@ async def forward_ticket_to_admin(db: DatabaseController, bot: Bot, user, ticket
                 user_group_id,
                 f"<b>Ticket topic:</b> '{ticket.get("support_issue", "Unknown")}'\n\nNOTE: You can't edit or delete the messages you send to user",
                 parse_mode="HTML",
-                reply_markup=inline.close_ticket(ticket.get("ticket_id"))
+                reply_markup=close_ticket(ticket.get("ticket_id"))
             )
 
             for msg in messages: 
@@ -129,8 +141,10 @@ async def create_user_group(db: DatabaseController, client: TelegramClient, bot:
         group_id = result.updates.chats[0].id
         group_id = -group_id
         group_entity = await client.get_entity(group_id)
+        me = await client.get_me()
+        created_by = '+' + me.phone
 
-        await db.set_user_group_id(user_id, group_id)
+        await db.set_user_group_id(user_id, group_id, created_by)
         logger.info(f"Created new group '{group_name}' for user {user_id}")
 
         # Give support admin rights in case session gets banned
@@ -329,3 +343,60 @@ async def ask(db: DatabaseController, bot: Bot, user_id: int, group_id: int):
     except Exception as e:
         await bot.send_message(group_id, "An error occurred while retrieving user data.")
         logger.error(f"Error processing /ask for {user_id}: {e}")
+
+
+async def get_available_session(db: DatabaseController, session_dir: str, group_limit: int = 45) -> TelegramClient:
+    """
+    Find a usable Telethon session from the directory that owns fewer than `group_limit` groups
+    based on the database record (via created_by column). Also updates the first name if needed.
+    """
+    session_files = [f for f in os.listdir(session_dir) if f.endswith(".session")]
+    random.shuffle(session_files)
+
+    for session_file in session_files:
+        session_name = session_file.replace(".session", "")
+        session_path = os.path.join(session_dir, session_name)
+        json_path = os.path.join(session_dir, session_name + ".json")
+
+        # Load API credentials
+        try:
+            with open(json_path, "r") as f:
+                json_data = json.load(f)
+                api_id = json_data.get("app_id")
+                api_hash = json_data.get("app_hash")
+                if not api_id or not api_hash:
+                    logger.warning(f"Missing API credentials in {json_path}")
+                    continue
+        except Exception as e:
+            logger.warning(f"Failed to read JSON for session {session_name}: {e}")
+            continue
+
+        # Check in DB how many groups this session has created
+        try:
+            group_count = await db.count_of_groups_created_by(session_name)
+            if group_count >= group_limit:
+                logger.info(f"Session {session_name} already created {group_count} groups. Skipping.")
+                continue
+        except Exception as e:
+            logger.error(f"Failed to get group count for session {session_name} from DB: {e}")
+            continue
+
+        # Initialize and authorize Telethon client
+        client = TelegramClient(session_path, api_id, api_hash)
+        try:
+            await client.connect()
+            if not await client.is_user_authorized():
+                logger.warning(f"Session {session_name} is not authorized. Skipping.")
+                await client.disconnect()
+                continue
+
+            logger.info(f"Using session {session_name} (created {group_count} groups)")
+            return client
+
+        except Exception as e:
+            logger.error(f"Failed to initialize or connect session {session_name}: {e}")
+            await client.disconnect()
+            continue
+
+    logger.error("No available session found.")
+    return None

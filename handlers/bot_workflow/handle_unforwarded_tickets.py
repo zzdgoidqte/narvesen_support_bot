@@ -28,7 +28,7 @@ USER_CONVERSATIONS = {
 
     # Forward to admin
     "wrong_drop_info": forward_ticket_to_admin,
-    "payment_sent_no_product": forward_ticket_to_admin,
+    "payment_sent_but_no_drop_or_product_or_location_or_coordinates": forward_ticket_to_admin,
     "less_product_received_than_expected": forward_ticket_to_admin, # Maybe automated response?
     "kladmen_or_packaging_complaint": forward_ticket_to_admin, # Maybe automated response?
     "opinion_or_info_question": forward_ticket_to_admin,
