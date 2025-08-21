@@ -27,7 +27,7 @@ async def main():
 
     # Register async tasks
     asyncio.create_task(handle_unforwarded_tickets(db, bot))
-    # asyncio.create_task(delete_unused_groups(db, bot)) #TODO test
+    asyncio.create_task(delete_unused_groups(db)) #TODO test
 
     logger.info("Starting bot polling...")
     try:

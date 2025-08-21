@@ -1007,7 +1007,7 @@ class DatabaseController:
             async with self.pool.acquire() as conn:
                 return await conn.fetch("""
                     SELECT * FROM support_tickets
-                    WHERE user_id = $1 AND is_closed = false
+                    WHERE user_id = $1 AND closed = false
                 """, user_id)
         except Exception as e:
             logger.error(f"Error fetching open tickets for user_id {user_id}: {e}")

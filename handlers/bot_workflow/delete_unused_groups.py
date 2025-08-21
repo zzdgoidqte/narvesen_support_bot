@@ -1,6 +1,7 @@
 import os
 import json
 import asyncio
+from zoneinfo import ZoneInfo  # Python 3.9+
 from datetime import datetime, timezone, timedelta
 from telethon.sync import TelegramClient
 from telethon.tl.functions.messages import DeleteChatRequest
@@ -8,11 +9,12 @@ from utils.logger import logger
 from controllers.db_controller import DatabaseController
 
 
-async def delete_unused_groups(db: DatabaseController, session_dir: str):
+async def delete_unused_groups(db: DatabaseController):
     """
     Runs every night at 03:00 UTC. Deletes Telegram groups that are inactive
     and removes them from the DB using their original session.
     """
+    session_dir = "sessions/narvesensupportbot"
     while True:
         try:
             now = datetime.now(timezone.utc)
@@ -25,7 +27,7 @@ async def delete_unused_groups(db: DatabaseController, session_dir: str):
             await asyncio.sleep(wait_seconds)
 
             logger.info("[Cleanup] Starting delete_unused_groups check")
-            cutoff_date = datetime.now(timezone.utc) - timedelta(days=7)
+            cutoff_date = datetime.now(timezone.utc) - timedelta(days=5)
 
             groups = await db.get_all_support_groups_with_creator()
 
@@ -41,6 +43,13 @@ async def delete_unused_groups(db: DatabaseController, session_dir: str):
                         continue
 
                     latest_created_at = await db.get_user_latest_ticket_date(user_id)
+                    
+                    if latest_created_at:
+                        # Assume naive datetime is in Helsinki time
+                        latest_created_at = latest_created_at.replace(tzinfo=ZoneInfo("Europe/Helsinki"))
+                        # Convert to UTC
+                        latest_created_at = latest_created_at.astimezone(timezone.utc)
+                    
                     if not latest_created_at or latest_created_at > cutoff_date:
                         continue
 
@@ -72,7 +81,7 @@ async def delete_unused_groups(db: DatabaseController, session_dir: str):
                         continue
 
                     try:
-                        await client(DeleteChatRequest(channel=group_id))
+                        await client(DeleteChatRequest(chat_id=abs(group_id)))
                         logger.info(f"[Cleanup] Deleted Telegram group {group_id}")
                         
                         # 4. Delete from DB
