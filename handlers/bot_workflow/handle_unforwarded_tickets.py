@@ -32,6 +32,7 @@ USER_CONVERSATIONS = {
     "less_product_received_than_expected": forward_ticket_to_admin, # Maybe automated response?
     "kladmen_or_packaging_complaint": forward_ticket_to_admin, # Maybe automated response?
     "opinion_or_info_question": forward_ticket_to_admin,
+    "can_you_get_me_the_closest_drop_to_x_location": forward_ticket_to_admin,
     "other": forward_ticket_to_admin,
 }
 
