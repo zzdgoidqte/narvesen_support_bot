@@ -62,6 +62,8 @@ async def forward_ticket_to_admin(db: DatabaseController, bot: Bot, user, ticket
                     logger.warning(f"Failed to rename group: {e}")
 
         if user_group_id:
+            group_entity = await client.get_entity(user_group_id)
+            user_group_id = group_entity.id
             await db.set_messages_forwarded_for_ticket(ticket.get('ticket_id'))
             ticket = await db.get_ticket(ticket.get('ticket_id'))
             # Call a /ask at the start of ticket

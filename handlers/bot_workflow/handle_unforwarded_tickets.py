@@ -168,7 +168,7 @@ lang:category
         handler_func = USER_CONVERSATIONS[category_key]
 
         if handler_func:    
-            if category_key not in ["cant_find_product_or_drop_or_dead_drop", "other", "wrong_drop_info", "payment_sent_no_product", "less_product_received_than_expected", "kladmen_or_packaging_complaint", "opinion_or_info_question"]:
+            if category_key not in ["cant_find_product_or_drop_or_dead_drop", "other", "wrong_drop_info", "payment_sent_no_product", "less_product_received_than_expected", "kladmen_or_packaging_complaint", "opinion_or_info_question", "can_you_get_me_the_closest_drop_to_x_location"]:
                 previous_users_category_key = await db.get_previous_users_category_key(user_id)
                 # Close ticket and dont reply if user spamming the same question.
                 if category_key == previous_users_category_key:
