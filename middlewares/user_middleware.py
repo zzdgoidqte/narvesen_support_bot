@@ -28,6 +28,9 @@ class UserMiddleware(BaseMiddleware):
             if await self.db.is_muted(int(user.id)):
                 return await handler(event, data)
 
+            if not await self.db.get_order_count_for_user(int(user.id)):
+                return await handler(event, data)
+
             # Handle group/channel messages
             if msg.chat.type != ChatType.PRIVATE:
                 return await handler(event, data)

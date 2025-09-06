@@ -40,22 +40,22 @@ Message 3:
 
     fallback_variations = {
         "lv": [
-            "Paroc dziļāk – bieži drops ir līdz 10–15 cm zemē",
+            "Paroc dziļāk - bieži drops ir līdz 10-15 cm zemē",
             "Vai tiešām esi īstajā vietā?",
             "Ja vēl neatrodi, atsūti dažas bildes vai video ar tuvplānu dropa vietai un apkārtnei"
         ],
         "ee": [
-            "Kaevu natuke sügavamale – drop võib olla 10–15 cm sügavusel",
+            "Kaevu natuke sügavamale - drop võib olla 10-15 cm sügavusel",
             "Oled kindel, et oled õiges kohas?",
             "Kui ikka veel ei leia, saada mõned pildid või video, kus on näha drop’i koht ja ümbrus lähivaates"
         ],
         "ru": [
-            "Попробуй копнуть глубже – дроп может быть на глубине 10–15 см",
+            "Попробуй копнуть глубже - дроп может быть на глубине 10-15 см",
             "Ты уверен, что смотришь в правильном месте?",
             "Если всё ещё не нашёл, пришли фото или видео с крупным планом дропа и её окружения"
         ],
         "eng": [
-            "Try digging deeper – the drop might be 10–15cm underground",
+            "Try digging deeper - the drop might be 10-15cm underground",
             "Are you sure you're at the right spot?",
             "If you still can't find it, send a few photos or a video clearly showing the drop location and surroundings"
         ]

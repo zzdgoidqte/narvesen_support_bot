@@ -5,17 +5,14 @@ from telethon.tl.types import InputChatUploadedPhoto
 from utils.logger import logger
 from controllers.db_controller import DatabaseController
 from config.config import Config
-from utils.helpers import escape_markdown_v1
+from utils.helpers import escape_markdown_v1, get_random_available_session
 from keyboards.inline import close_ticket
 import os
-import random
-import json
 
 async def forward_ticket_to_admin(db: DatabaseController, bot: Bot, user, ticket, lang):
     try:
         # Initialize Telethon client
-        session_dir = "sessions/narvesensupportbot"
-        client = await get_available_session(db, session_dir)
+        client = await get_random_available_session(db)
 
         # Start Telethon client if not already started
         if not client:
@@ -35,8 +32,6 @@ async def forward_ticket_to_admin(db: DatabaseController, bot: Bot, user, ticket
         # Check if a private group exists for this user
         user_group_id = None
         user_id = user.get('user_id')
-        first_name = user.get('first_name')
-        last_name = user.get('last_name')
         user_group_id = await db.get_user_group_id(user_id)
 
         if not user_group_id:
@@ -101,7 +96,7 @@ async def create_user_group(db: DatabaseController, client: TelegramClient, bot:
         last_name = user.get("last_name")
 
         group_name = first_name + (" " + last_name if last_name else "")
-
+        
         # Get bot and user entities
         bot_entity = await client.get_entity(Config.BOT_USERNAME)
         if Config.DEVELOPMENT_MODE:
@@ -324,60 +319,3 @@ async def ask(db: DatabaseController, bot: Bot, user_id: int, group_id: int):
     except Exception as e:
         await bot.send_message(group_id, "An error occurred while retrieving user data.")
         logger.error(f"Error processing /ask for {user_id}: {e}")
-
-
-async def get_available_session(db: DatabaseController, session_dir: str, group_limit: int = 45) -> TelegramClient:
-    """
-    Find a usable Telethon session from the directory that owns fewer than `group_limit` groups
-    based on the database record (via created_by column). Also updates the first name if needed.
-    """
-    session_files = [f for f in os.listdir(session_dir) if f.endswith(".session")]
-    random.shuffle(session_files)
-
-    for session_file in session_files:
-        session_name = session_file.replace(".session", "")
-        session_path = os.path.join(session_dir, session_name)
-        json_path = os.path.join(session_dir, session_name + ".json")
-
-        # Load API credentials
-        try:
-            with open(json_path, "r") as f:
-                json_data = json.load(f)
-                api_id = json_data.get("app_id")
-                api_hash = json_data.get("app_hash")
-                if not api_id or not api_hash:
-                    logger.warning(f"Missing API credentials in {json_path}")
-                    continue
-        except Exception as e:
-            logger.warning(f"Failed to read JSON for session {session_name}: {e}")
-            continue
-
-        # Check in DB how many groups this session has created
-        try:
-            group_count = await db.count_of_groups_created_by(session_name)
-            if group_count >= group_limit:
-                logger.info(f"Session {session_name} already created {group_count} groups. Skipping.")
-                continue
-        except Exception as e:
-            logger.error(f"Failed to get group count for session {session_name} from DB: {e}")
-            continue
-
-        # Initialize and authorize Telethon client
-        client = TelegramClient(session_path, api_id, api_hash)
-        try:
-            await client.connect()
-            if not await client.is_user_authorized():
-                logger.warning(f"Session {session_name} is not authorized. Skipping.")
-                await client.disconnect()
-                continue
-
-            logger.info(f"Using session {session_name} ({group_count} existing groups for this session)")
-            return client
-
-        except Exception as e:
-            logger.error(f"Failed to initialize or connect session {session_name}: {e}")
-            await client.disconnect()
-            continue
-
-    logger.error("No available session found.")
-    return None

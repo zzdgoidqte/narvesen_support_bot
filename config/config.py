@@ -20,4 +20,6 @@ class Config:
 
     NANO_GPT_API_KEY = os.getenv("NANO_GPT_API_KEY")
 
+    IPROYAL_PROXY_AUTH = os.getenv("IPROYAL_PROXY_AUTH")
+
     DEVELOPMENT_MODE = os.getenv("DEVELOPMENT_MODE") == "true"

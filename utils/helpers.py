@@ -1,7 +1,15 @@
 import difflib
 import aiohttp
+import socks
+import requests
+import os
+import random
+import json
+from telethon import TelegramClient
+from urllib.parse import unquote
 from config.config import Config
 from utils.logger import logger
+from controllers.db_controller import DatabaseController
 
 
 
@@ -100,3 +108,91 @@ def is_similar_to_start(user_text: str, threshold: float = 0.7) -> bool:
     # Compare to 'start'
     similarity = difflib.SequenceMatcher(None, cleaned, "start").ratio()
     return similarity >= threshold
+
+def get_socks5_proxy():
+    try:
+        url = 'https://ipv4.icanhazip.com'
+        proxy = 'geo.iproyal.com:12321'
+
+        # Extract auth credentials
+        auth = Config.IPROYAL_PROXY_AUTH  # e.g., 'username:password'
+        username, password = auth.split(':')
+
+        # Unquote in case URL encoding is used in credentials
+        username = unquote(username)
+        password = unquote(password)
+
+        proxies = {
+            'http': f'socks5h://{auth}@{proxy}',
+            'https': f'socks5h://{auth}@{proxy}'
+        }
+
+        # Verify the proxy works and get public IP
+        response = requests.get(url, proxies=proxies, timeout=10)
+        response.raise_for_status()
+        logger.debug(f"Proxy IP: {response.text.strip()}")
+
+        host, port = proxy.split(':')
+        return (socks.SOCKS5, host, int(port), True, username, password)
+
+    except Exception as e:
+        logger.error(f"Error fetching proxy: {e}")
+        return None
+    
+
+async def get_random_available_session(db: DatabaseController, group_limit: int = 45) -> TelegramClient:
+    """
+    Find a usable Telethon session from the directory that owns fewer than `group_limit` groups
+    based on the database record (via created_by column). Also updates the first name if needed.
+    """
+    session_dir = "sessions/narvesensupportbot"
+    session_files = [f for f in os.listdir(session_dir) if f.endswith(".session")]
+    random.shuffle(session_files)
+
+    for session_file in session_files:
+        session_name = session_file.replace(".session", "")
+        session_path = os.path.join(session_dir, session_name)
+        json_path = os.path.join(session_dir, session_name + ".json")
+
+        # Load API credentials
+        try:
+            with open(json_path, "r") as f:
+                json_data = json.load(f)
+                api_id = json_data.get("app_id")
+                api_hash = json_data.get("app_hash")
+                if not api_id or not api_hash:
+                    logger.warning(f"Missing API credentials in {json_path}")
+                    continue
+        except Exception as e:
+            logger.warning(f"Failed to read JSON for session {session_name}: {e}")
+            continue
+
+        # Check in DB how many groups this session has created
+        try:
+            group_count = await db.count_of_groups_created_by(session_name)
+            if group_count >= group_limit:
+                logger.info(f"Session {session_name} already created {group_count} groups. Skipping.")
+                continue
+        except Exception as e:
+            logger.error(f"Failed to get group count for session {session_name} from DB: {e}")
+            continue
+
+        # Initialize and authorize Telethon client
+        client = TelegramClient(session_path, api_id, api_hash)
+        try:
+            await client.connect()
+            if not await client.is_user_authorized():
+                logger.warning(f"Session {session_name} is not authorized. Skipping.")
+                await client.disconnect()
+                continue
+
+            logger.info(f"Using session {session_name} ({group_count} existing groups for this session)")
+            return client
+
+        except Exception as e:
+            logger.error(f"Failed to initialize or connect session {session_name}: {e}")
+            await client.disconnect()
+            continue
+
+    logger.error("No available session found.")
+    return None

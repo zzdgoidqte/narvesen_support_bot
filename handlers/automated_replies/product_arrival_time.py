@@ -39,8 +39,8 @@ Bitcoin: 10-60 мин
     "eng": """Delivery time after payment:
 
 TRX / USDT / ETH: up to 3 min  
-Litecoin / Card: 5–15 min  
-Bitcoin: 10–60 min
+Litecoin / Card: 5-15 min  
+Bitcoin: 10-60 min
 
 Payment processing could sometimes take longer. Contact us again if you're waiting too long.
 
