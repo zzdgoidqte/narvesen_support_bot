@@ -56,9 +56,10 @@ async def get_random_available_session(db: DatabaseController, group_limit: int 
             continue
 
         # Initialize and authorize Telethon client
-        client = TelegramClient(session_path, api_id, api_hash, proxy)
+        client = TelegramClient(session_path, api_id, api_hash, proxy=proxy)
         try:
             await client.connect()
+            await client.get_entity(Config.BOT_USERNAME)
             if not await client.is_user_authorized():
                 logger.warning(f"Session {session_name} is not authorized. Skipping session.")
                 await client.disconnect()
@@ -97,12 +98,9 @@ async def retrieve_session(session_name):
     if not proxy:
         logger.warning(f"[Cleanup] Unable to retrieve proxy for {session_name}")
         return None
-    
-    client = TelegramClient(session_path, api_id, api_hash, proxy)
-    await client.connect()
 
     # Initialize and authorize Telethon client
-    client = TelegramClient(session_path, api_id, api_hash, proxy)
+    client = TelegramClient(session_path, api_id, api_hash, proxy=proxy)
     try:
         await client.connect()
         if not await client.is_user_authorized():
@@ -112,7 +110,6 @@ async def retrieve_session(session_name):
 
         logger.info(f"Using session {session_name}")
         return client
-
     except Exception as e:
         logger.error(f"[Cleanup] Failed to initialize or connect session {session_name}: {e}")
         if client:
@@ -199,10 +196,6 @@ async def create_user_group(db: DatabaseController, client: TelegramClient, bot:
         bot_settings = await db.get_bot_settings()
         raw_username = bot_settings.get('support_username', '')
         support_username = raw_username if raw_username.startswith('@') else '@' + raw_username
-        await bot.send_message(
-            chat_id=support_username,
-            text=f"ERROR CREATING USER GROUP WITH USER {user_id}, {group_name}:\n{e}"
-        )
         logger.error(f"Failed to create group for user {user_id}: {e}")
         raise
 
@@ -378,31 +371,33 @@ async def is_message_deleted(bot: Bot, chat_id: int, message_id: int) -> bool:
         
 async def forward_ticket_to_admin(db: DatabaseController, bot: Bot, user, ticket, lang): # DO NOT edit these params
     try:
-        # Initialize Telethon client
-        client = await get_random_available_session(db)
-
-        # Start Telethon client if not already started
-        if not client:
-            logger.error("Failed to forward ticket to admin - No suitable session found (all are either unauthorized, failed, or hit group limit).")
-            bot_settings = await db.get_bot_settings()
-            raw_username = bot_settings.get('support_username', '')
-            support_username = raw_username if raw_username.startswith('@') else '@' + raw_username
-            await bot.send_message(
-                chat_id=support_username,
-                text=f"ERROR: Failed to forward ticket to admin - No suitable session found (all are either unauthorized, failed, or hit group limit).\n{e}"
-            )
-            return
-        
-        if not client.is_connected():
-            await client.start()
-
         # Check if a private group exists for this user
         user_group_id = None
         user_id = user.get('user_id')
         user_group_id = await db.get_user_group_id(user_id)
 
+
         if not user_group_id:
+            # Initialize Telethon client
+            client = await get_random_available_session(db)
+
+            # Start Telethon client if not already started
+            if not client:
+                logger.error("Failed to forward ticket to admin - No suitable session found (all are either unauthorized, failed, or hit group limit).")
+                bot_settings = await db.get_bot_settings()
+                raw_username = bot_settings.get('support_username', '')
+                support_username = raw_username if raw_username.startswith('@') else '@' + raw_username
+                await bot.send_message(
+                    chat_id=support_username,
+                    text=f"ERROR: Failed to forward ticket to admin - No suitable session found (all are either unauthorized, failed, or hit group limit).\n{e}"
+                )
+                return
+            
+            if not client.is_connected():
+                await client.start()
+
             user_group_id = await create_user_group(db, client, bot, user)
+            await client.disconnect()
 
         if user_group_id:
             await db.set_messages_forwarded_for_ticket(ticket.get('ticket_id'))

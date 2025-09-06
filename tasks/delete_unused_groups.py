@@ -68,6 +68,7 @@ async def delete_unused_groups(db: DatabaseController):
                         await db.delete_support_group(user_id)
                         await client.disconnect()
                         logger.info(f"[Cleanup] Deleted group {group_id} for user {user_id} from DB")
+                        await asyncio.sleep(30)
                     except Exception as e:
                         logger.warning(f"[Cleanup] Could not delete group {group_id}: {e}")
                         await client.disconnect()

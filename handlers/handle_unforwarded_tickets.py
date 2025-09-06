@@ -6,9 +6,39 @@ from config.config import Config
 from utils.logger import logger
 from utils.helpers import query_nano_gpt, is_emoji_only
 from utils.telegram_helpers import is_message_deleted, forward_ticket_to_admin
-from handlers.automated_replies import handle_thanks, handle_voice_message
+from handlers.automated_replies import *
 from handlers.automated_replies.misc_replies import get_time_based_message
 from controllers.db_controller import DatabaseController
+
+
+
+USER_CONVERSATIONS = {
+    # AI gathers more info, then forwards to admin
+    "cant_find_product_or_drop_or_dead_drop": handle_not_received_drop,
+
+    # Automated response
+    "dont_know_how_to_pay": handle_payment_help,
+    "restock_request_for_product_or_location": handle_restock_info,
+    "is_product_still_available": handle_check_product_availability,
+    "what_is_usual_product_arrival_time": handle_product_arrival_time, 
+
+    # "👍"
+    "user_says_thanks": handle_thanks,
+    "issue_resolved_by_user": handle_thanks,
+    "ok": handle_thanks,
+
+    # Forward to admin
+    "wrong_drop_info": forward_ticket_to_admin,
+    "payment_sent_but_no_drop_or_product_or_location_or_coordinates": forward_ticket_to_admin,
+    "less_product_received_than_expected": forward_ticket_to_admin, # Maybe automated response?
+    "kladmen_or_packaging_complaint": forward_ticket_to_admin, # Maybe automated response?
+    "bot_banned_or_deleted_or_inaccessible": forward_ticket_to_admin, # Maybe automated response?
+    "opinion_or_info_question": forward_ticket_to_admin,
+    "can_you_get_me_the_closest_drop_to_x_location": forward_ticket_to_admin,
+    "other": forward_ticket_to_admin,
+}
+
+LANGUAGES = ['lv', 'eng', 'ru', 'ee']
 
 
 async def handle_unforwarded_tickets(db: DatabaseController, bot: Bot):
@@ -102,7 +132,7 @@ async def categorise_ticket(db: DatabaseController, bot: Bot, ticket):
 Classify the following user messages into:
 
 1. One of the following **categories**:
-\"\"\"{"\n".join(Config.USER_CONVERSATIONS.keys())}\"\"\"
+\"\"\"{"\n".join(USER_CONVERSATIONS.keys())}\"\"\"
 
 2. One of the following **languages**:
 lv, eng, ru, ee
@@ -125,8 +155,8 @@ lang:category
             category_key = category_key.strip()
 
             # Handle unexpected output
-            category_key = 'other' if category_key not in Config.USER_CONVERSATIONS else category_key
-            lang = 'other' if lang not in Config.LANGUAGES else lang
+            category_key = 'other' if category_key not in USER_CONVERSATIONS else category_key
+            lang = 'other' if lang not in LANGUAGES else lang
 
             logger.info(f"Detected language: {lang}")
             logger.info(f"Detected response category: {category_key}")
@@ -136,10 +166,10 @@ lang:category
             category_key = 'other'
 
         # Check if it's a valid handler key
-        handler_func = Config.USER_CONVERSATIONS[category_key]
+        handler_func = USER_CONVERSATIONS[category_key]
 
         if handler_func:    
-            if category_key not in ["cant_find_product_or_drop_or_dead_drop", "other", "wrong_drop_info", "payment_sent_no_product", "less_product_received_than_expected", "kladmen_or_packaging_complaint", "opinion_or_info_question", "can_you_get_me_the_closest_drop_to_x_location"]:
+            if category_key not in ["cant_find_product_or_drop_or_dead_drop", "other", "wrong_drop_info", "payment_sent_no_product", "less_product_received_than_expected", "kladmen_or_packaging_complaint", "opinion_or_info_question", "can_you_get_me_the_closest_drop_to_x_location", "bot_banned_or_deleted_or_inaccessible"]:
                 previous_users_category_key = await db.get_previous_users_category_key(user_id)
                 # Close ticket and dont reply if user spamming the same question.
                 if category_key == previous_users_category_key:

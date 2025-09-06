@@ -30,7 +30,7 @@ async def delete_all_owned_chats():
                     await client(DeleteChatRequest(entity.id))
                     print(f"Deleted basic group: {entity.title}")
                 # Add delay to avoid flood limits
-                await asyncio.sleep(1)
+                await asyncio.sleep(60)
             except Exception as e:
                 print(f"Failed to delete {entity.title}: {e}")
     
