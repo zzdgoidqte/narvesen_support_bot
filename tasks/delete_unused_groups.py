@@ -3,7 +3,7 @@ from zoneinfo import ZoneInfo  # Python 3.9+
 from datetime import datetime, timezone, timedelta
 from telethon.tl.functions.messages import DeleteChatRequest
 from utils.logger import logger
-from utils.helpers import retrieve_session
+from utils.telegram_helpers import retrieve_session
 from controllers.db_controller import DatabaseController
 
 

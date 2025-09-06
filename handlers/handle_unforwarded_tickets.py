@@ -1,42 +1,15 @@
 import asyncio
-import emoji
 import pytz
 from aiogram import Bot
-from aiogram.exceptions import TelegramAPIError
 from datetime import datetime, timedelta, timezone
+from config.config import Config
 from utils.logger import logger
-from utils.helpers import query_nano_gpt
-from handlers.bot_workflow.forward_ticket_to_admin import forward_ticket_to_admin
+from utils.helpers import query_nano_gpt, is_emoji_only
+from utils.telegram_helpers import is_message_deleted, forward_ticket_to_admin
+from handlers.automated_replies import handle_thanks, handle_voice_message
+from handlers.automated_replies.misc_replies import get_time_based_message
 from controllers.db_controller import DatabaseController
-from handlers.automated_replies import *
 
-
-USER_CONVERSATIONS = {
-    # AI gathers more info, then forwards to admin
-    "cant_find_product_or_drop_or_dead_drop": handle_not_received_drop,
-
-    # Automated response
-    "dont_know_how_to_pay": handle_payment_help,
-    "restock_request_for_product_or_location": handle_restock_info,
-    "is_product_still_available": handle_check_product_availability,
-    "what_is_usual_product_arrival_time": handle_product_arrival_time, 
-
-    # "👍"
-    "user_says_thanks": handle_thanks,
-    "issue_resolved_by_user": handle_thanks,
-    "ok": handle_thanks,
-
-    # Forward to admin
-    "wrong_drop_info": forward_ticket_to_admin,
-    "payment_sent_but_no_drop_or_product_or_location_or_coordinates": forward_ticket_to_admin,
-    "less_product_received_than_expected": forward_ticket_to_admin, # Maybe automated response?
-    "kladmen_or_packaging_complaint": forward_ticket_to_admin, # Maybe automated response?
-    "opinion_or_info_question": forward_ticket_to_admin,
-    "can_you_get_me_the_closest_drop_to_x_location": forward_ticket_to_admin,
-    "other": forward_ticket_to_admin,
-}
-
-LANGUAGES = ['lv', 'eng', 'ru', 'ee']
 
 async def handle_unforwarded_tickets(db: DatabaseController, bot: Bot):
     """
@@ -74,7 +47,7 @@ async def handle_unforwarded_tickets(db: DatabaseController, bot: Bot):
                     if not support_issue:
                         asyncio.create_task(categorise_ticket(db, bot, ticket))
                     else:
-                        asyncio.create_task(handle_categorised_ticket(db, bot, ticket))
+                        asyncio.create_task(handle_categorised_unforwarded_ticket(db, bot, ticket))
 
             await asyncio.sleep(10)
         except Exception as e:
@@ -129,7 +102,7 @@ async def categorise_ticket(db: DatabaseController, bot: Bot, ticket):
 Classify the following user messages into:
 
 1. One of the following **categories**:
-\"\"\"{"\n".join(USER_CONVERSATIONS.keys())}\"\"\"
+\"\"\"{"\n".join(Config.USER_CONVERSATIONS.keys())}\"\"\"
 
 2. One of the following **languages**:
 lv, eng, ru, ee
@@ -152,8 +125,8 @@ lang:category
             category_key = category_key.strip()
 
             # Handle unexpected output
-            category_key = 'other' if category_key not in USER_CONVERSATIONS else category_key
-            lang = 'other' if lang not in LANGUAGES else lang
+            category_key = 'other' if category_key not in Config.USER_CONVERSATIONS else category_key
+            lang = 'other' if lang not in Config.LANGUAGES else lang
 
             logger.info(f"Detected language: {lang}")
             logger.info(f"Detected response category: {category_key}")
@@ -163,7 +136,7 @@ lang:category
             category_key = 'other'
 
         # Check if it's a valid handler key
-        handler_func = USER_CONVERSATIONS[category_key]
+        handler_func = Config.USER_CONVERSATIONS[category_key]
 
         if handler_func:    
             if category_key not in ["cant_find_product_or_drop_or_dead_drop", "other", "wrong_drop_info", "payment_sent_no_product", "less_product_received_than_expected", "kladmen_or_packaging_complaint", "opinion_or_info_question", "can_you_get_me_the_closest_drop_to_x_location"]:
@@ -183,7 +156,7 @@ lang:category
         logger.error(f"Error in categorise_ticket: {e}")
 
 
-async def handle_categorised_ticket(db: DatabaseController, bot: Bot, ticket):
+async def handle_categorised_unforwarded_ticket(db: DatabaseController, bot: Bot, ticket):
     """
     For now only 1 problems to handle in this scenario 
     1. cant_find_product_or_drop_or_dead_drop
@@ -292,57 +265,4 @@ Respond with only one word: Complaint or Resolved.
 
     except Exception as e:
         logger.error(f"Error in handle_categorised_ticket: {e}")
-
-
-async def is_message_deleted(bot: Bot, chat_id: int, message_id: int) -> bool:
-    try:
-        # Try to copy the message to self to see if it was deleted (only workaround i could find..)
-        await bot.copy_message(
-            chat_id=1234567890,  # Dummy chat ID
-            from_chat_id=chat_id,
-            message_id=message_id
-        )
-        return False  # Message exists
-    except TelegramAPIError as e:
-        # This could be due to message not found, deleted, or other issues
-        error_text = str(e).lower()
-        if (
-            "message to copy not found" in error_text
-            or "message_id_invalid" in error_text
-            or "message identifier is not valid" in error_text
-        ):
-            return True  # Message was deleted or doesn't exist
-        elif "chat not found" in error_text:
-            return False  # Error about chat_id which means message_id hasnt been deleted
-        else:
-            logger.error(f"Error in is_message_deleted: {e}")
-            return False
-        
-
-def is_emoji_only(text: str) -> bool:
-    return all(char in emoji.EMOJI_DATA for char in text if not char.isspace())
-
-def get_time_based_message(lang: str, hour: int) -> str:
-    is_late = 22 <= hour <= 23
-    is_early = 0 <= hour < 7
-
-    if lang == "lv":
-        return (
-            "Ņemot vērā, ka ir ļoti vēls, šobrīd nevaram garantēt tūlītēju risinājumu." if is_late else
-            "Ņemot vērā, ka ir ļoti agrs rīts, šobrīd nevaram garantēt tūlītēju risinājumu."
-        )
-    elif lang == "ee":
-        return (
-            "Kuna on väga hiline aeg, ei saa me praegu lahendust garanteerida." if is_late else
-            "Kuna on väga varajane hommik, ei saa me praegu lahendust garanteerida."
-        )
-    elif lang == "ru":
-        return (
-            "Сейчас очень поздно, поэтому мы не можем гарантировать быстрое решение." if is_late else
-            "Сейчас очень рано утром, поэтому мы не можем гарантировать быстрое решение."
-        )
-    else:  # eng or fallback
-        return (
-            "Since it is very late, we can't guarantee to resolve the issue right now." if is_late else
-            "Since it is very early in the morning, we can't guarantee to resolve the issue right now."
-        )
+    

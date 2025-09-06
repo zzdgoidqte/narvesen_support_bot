@@ -2,16 +2,14 @@ import difflib
 import aiohttp
 import socks
 import requests
-import os
-import random
-import json
-from telethon import TelegramClient
+import emoji
 from urllib.parse import unquote
 from config.config import Config
 from utils.logger import logger
-from controllers.db_controller import DatabaseController
 
 
+def is_emoji_only(text: str) -> bool:
+    return all(char in emoji.EMOJI_DATA for char in text if not char.isspace())
 
 async def query_nano_gpt(prompt: str, model: str = "gpt-5-mini", temperature: float = 0.0, max_tokens: int = 1000) -> str | None:
     """
@@ -139,109 +137,3 @@ def get_socks5_proxy():
         logger.error(f"Error fetching proxy: {e}")
         return None
     
-
-async def get_random_available_session(db: DatabaseController, group_limit: int = 45) -> TelegramClient:
-    """
-    Find a usable Telethon session from the directory that owns fewer than `group_limit` groups
-    based on the database record (via created_by column). Also updates the first name if needed.
-    """
-    session_dir = "sessions/narvesensupportbot"
-    session_files = [f for f in os.listdir(session_dir) if f.endswith(".session")]
-    random.shuffle(session_files)
-
-    for session_file in session_files:
-        session_name = session_file.replace(".session", "")
-        session_path = os.path.join(session_dir, session_name)
-        json_path = os.path.join(session_dir, session_name + ".json")
-
-        # Load API credentials
-        try:
-            with open(json_path, "r") as f:
-                json_data = json.load(f)
-                api_id = json_data.get("app_id")
-                api_hash = json_data.get("app_hash")
-                if not api_id or not api_hash:
-                    logger.warning(f"Missing API credentials in {json_path}")
-                    continue
-        except Exception as e:
-            logger.warning(f"Failed to read JSON for session {session_name}: {e}")
-            continue
-
-        # Check in DB how many groups this session has created
-        try:
-            group_count = await db.count_of_groups_created_by(session_name)
-            if group_count >= group_limit:
-                logger.info(f"Session {session_name} already created {group_count} groups. Skipping session.")
-                continue
-        except Exception as e:
-            logger.error(f"Failed to get group count for session {session_name} from DB: {e}")
-            continue
-        
-        proxy = get_socks5_proxy()
-        if not proxy:
-            logger.info(f"Failed to retrieve proxy for session {session_name}. Skipping session.")
-            continue
-
-        # Initialize and authorize Telethon client
-        client = TelegramClient(session_path, api_id, api_hash, proxy)
-        try:
-            await client.connect()
-            if not await client.is_user_authorized():
-                logger.warning(f"Session {session_name} is not authorized. Skipping session.")
-                await client.disconnect()
-                continue
-
-            logger.info(f"Using session {session_name} ({group_count} existing groups for this session)")
-            return client
-
-        except Exception as e:
-            logger.error(f"Failed to initialize or connect session {session_name}: {e}")
-            await client.disconnect()
-            continue
-
-    logger.error("FAILED TO RETRIEVE AVAILABLE SESSION - ALL SESSIONS HAVE GROUP LIMIT REACHED OR BANNED")
-    return None
-
-async def retrieve_session(session_name):
-    session_dir = "sessions/narvesensupportbot"
-    session_path = os.path.join(session_dir, session_name)
-    json_path = os.path.join(session_dir, session_name + ".json")
-
-    if not os.path.exists(json_path):
-        logger.warning(f"[Cleanup] JSON file missing for {session_name}")
-        return None
-
-    with open(json_path, "r") as f:
-        creds = json.load(f)
-        api_id = creds.get("app_id")
-        api_hash = creds.get("app_hash")
-
-    if not api_id or not api_hash:
-        logger.warning(f"[Cleanup] Incomplete credentials for {session_name}")
-        return None
-    
-    proxy = get_socks5_proxy()
-    if not proxy:
-        logger.warning(f"[Cleanup] Unable to retrieve proxy for {session_name}")
-        return None
-    
-    client = TelegramClient(session_path, api_id, api_hash, proxy)
-    await client.connect()
-
-    # Initialize and authorize Telethon client
-    client = TelegramClient(session_path, api_id, api_hash, proxy)
-    try:
-        await client.connect()
-        if not await client.is_user_authorized():
-            logger.warning(f"[Cleanup] Session {session_name} is not authorized.")
-            await client.disconnect()
-            return None
-
-        logger.info(f"Using session {session_name}")
-        return client
-
-    except Exception as e:
-        logger.error(f"[Cleanup] Failed to initialize or connect session {session_name}: {e}")
-        if client:
-            await client.disconnect()
-        return None
