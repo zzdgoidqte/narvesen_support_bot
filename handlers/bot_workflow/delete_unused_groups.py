@@ -1,11 +1,9 @@
-import os
-import json
 import asyncio
 from zoneinfo import ZoneInfo  # Python 3.9+
 from datetime import datetime, timezone, timedelta
-from telethon.sync import TelegramClient
 from telethon.tl.functions.messages import DeleteChatRequest
 from utils.logger import logger
+from utils.helpers import retrieve_session
 from controllers.db_controller import DatabaseController
 
 
@@ -14,7 +12,6 @@ async def delete_unused_groups(db: DatabaseController):
     Runs every night at 03:00 UTC. Deletes Telegram groups that are inactive
     and removes them from the DB using their original session.
     """
-    session_dir = "sessions/narvesensupportbot"
     while True:
         try:
             now = datetime.now(timezone.utc)
@@ -55,44 +52,26 @@ async def delete_unused_groups(db: DatabaseController):
 
                     # 2. Load session and credentials
                     session_name = created_by.strip()
-                    session_path = os.path.join(session_dir, session_name)
-                    json_path = os.path.join(session_dir, session_name + ".json")
+                    client = await retrieve_session(session_name)
 
-                    if not os.path.exists(json_path):
-                        logger.warning(f"[Cleanup] JSON file missing for {session_name}")
+                    if not client:
+                        logger.warning(f"[Cleanup] Failed to load client for session {session_name}")
                         continue
-
-                    with open(json_path, "r") as f:
-                        creds = json.load(f)
-                        api_id = creds.get("app_id")
-                        api_hash = creds.get("app_hash")
-
-                    if not api_id or not api_hash:
-                        logger.warning(f"[Cleanup] Incomplete credentials for {session_name}")
-                        continue
-
-                    # 3. Connect and delete group
-                    client = TelegramClient(session_path, api_id, api_hash)
-                    await client.connect()
-
-                    if not await client.is_user_authorized():
-                        logger.warning(f"[Cleanup] Session {session_name} not authorized")
-                        await client.disconnect()
-                        continue
-
+                    if not client.is_connected():
+                        await client.start()
                     try:
+                        # 3. Delete group
                         await client(DeleteChatRequest(chat_id=abs(group_id)))
                         logger.info(f"[Cleanup] Deleted Telegram group {group_id}")
                         
                         # 4. Delete from DB
                         await db.delete_support_group(user_id)
+                        await client.disconnect()
                         logger.info(f"[Cleanup] Deleted group {group_id} for user {user_id} from DB")
                     except Exception as e:
                         logger.warning(f"[Cleanup] Could not delete group {group_id}: {e}")
                         await client.disconnect()
                         continue
-
-                    await client.disconnect()
 
                 except Exception as inner_e:
                     logger.error(f"[Cleanup] Error with user_id {user_id}, group_id {group_id}: {inner_e}")
