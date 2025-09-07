@@ -1,9 +1,9 @@
 import difflib
 import aiohttp
 import socks
-import requests
 import emoji
-from urllib.parse import unquote
+from urllib.parse import quote
+from aiohttp_socks import ProxyConnector
 from config.config import Config
 from utils.logger import logger
 
@@ -107,33 +107,33 @@ def is_similar_to_start(user_text: str, threshold: float = 0.7) -> bool:
     similarity = difflib.SequenceMatcher(None, cleaned, "start").ratio()
     return similarity >= threshold
 
-def get_socks5_proxy():
+
+def get_socks5_sticky_proxy(session_name: str):
+    """
+    Generate a SOCKS5 sticky proxy tuple for use with Telethon or similar libraries,
+    using IPRoyal's session-based sticky IP format.
+
+    Args:
+        session_name (str): A unique identifier (e.g., phone number) to be used
+                            as the sticky session name. This name determines which
+                            IP is assigned and kept for 168 hours.
+
+    Returns:
+        tuple: A tuple formatted as (proxy_type, host, port, rdns, username, password),
+               compatible with Telethon.
+    """
     try:
-        url = 'https://ipv4.icanhazip.com'
-        proxy = 'geo.iproyal.com:12321'
+        proxy_host = 'geo.iproyal.com'
+        proxy_port = 12321
 
-        # Extract auth credentials
-        auth = Config.IPROYAL_PROXY_AUTH  # e.g., 'username:password'
-        username, password = auth.split(':')
+        session_name = session_name.replace("+", "").strip()
 
-        # Unquote in case URL encoding is used in credentials
-        username = unquote(username)
-        password = unquote(password)
+        username, base_password = Config.IPROYAL_PROXY_AUTH.split(':')
 
-        proxies = {
-            'http': f'socks5h://{auth}@{proxy}',
-            'https': f'socks5h://{auth}@{proxy}'
-        }
+        full_password = f"{base_password}_session-{session_name}_lifetime-168h"
 
-        # Verify the proxy works and get public IP
-        response = requests.get(url, proxies=proxies, timeout=10)
-        response.raise_for_status()
-        logger.debug(f"Proxy IP: {response.text.strip()}")
-
-        host, port = proxy.split(':')
-        return (socks.SOCKS5, host, int(port), True, username, password)
+        return (socks.SOCKS5, proxy_host, proxy_port, True, username, full_password)
 
     except Exception as e:
-        logger.error(f"Error fetching proxy: {e}")
+        logger.error(f"[Proxy {session_name}] Error: {e}")
         return None
-    

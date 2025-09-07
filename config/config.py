@@ -14,7 +14,6 @@ class Config:
     DB_POOL_SIZE = int(os.getenv("DB_POOL_SIZE", 5))  
     DB_MAX_OVERFLOW = int(os.getenv("DB_MAX_OVERFLOW", 10))  
 
-    BOT_USERNAME = os.getenv("BOT_USERNAME") # retrieve from db
     SUPPORT_ADMIN_USERNAME = 'guncha420' # @guncha420 for testing
 
     NANO_GPT_API_KEY = os.getenv("NANO_GPT_API_KEY")

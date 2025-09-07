@@ -6,11 +6,10 @@ from telethon import TelegramClient
 from telethon.tl.functions.messages import CreateChatRequest, EditChatAboutRequest, EditChatPhotoRequest, EditChatAdminRequest
 from telethon.tl.types import InputChatUploadedPhoto
 from keyboards.inline import close_ticket
-from utils.helpers import get_socks5_proxy, escape_markdown_v1
+from utils.helpers import get_socks5_sticky_proxy, escape_markdown_v1
 from utils.logger import logger
 from config.config import Config
 from controllers.db_controller import DatabaseController
-
 
 
 async def get_random_available_session(db: DatabaseController, group_limit: int = 45) -> TelegramClient:
@@ -50,16 +49,15 @@ async def get_random_available_session(db: DatabaseController, group_limit: int 
             logger.error(f"Failed to get group count for session {session_name} from DB: {e}")
             continue
         
-        proxy = get_socks5_proxy()
-        if not proxy:
-            logger.info(f"Failed to retrieve proxy for session {session_name}. Skipping session.")
-            continue
+        proxy = get_socks5_sticky_proxy(session_name)
 
         # Initialize and authorize Telethon client
-        client = TelegramClient(session_path, api_id, api_hash, proxy=proxy)
         try:
+            client = TelegramClient(session_path, api_id, api_hash, proxy=proxy)
+            bot_settings = await db.get_bot_settings()
+            support_bot_username = bot_settings.get('support_bot_username')
             await client.connect()
-            await client.get_entity(Config.BOT_USERNAME)
+            await client.get_entity(support_bot_username)
             if not await client.is_user_authorized():
                 logger.warning(f"Session {session_name} is not authorized. Skipping session.")
                 await client.disconnect()
@@ -94,14 +92,14 @@ async def retrieve_session(session_name):
         logger.warning(f"[Cleanup] Incomplete credentials for {session_name}")
         return None
     
-    proxy = get_socks5_proxy()
+    proxy = get_socks5_sticky_proxy(session_name)
     if not proxy:
         logger.warning(f"[Cleanup] Unable to retrieve proxy for {session_name}")
         return None
 
     # Initialize and authorize Telethon client
-    client = TelegramClient(session_path, api_id, api_hash, proxy=proxy)
     try:
+        client = TelegramClient(session_path, api_id, api_hash, proxy=proxy)
         await client.connect()
         if not await client.is_user_authorized():
             logger.warning(f"[Cleanup] Session {session_name} is not authorized.")
@@ -117,7 +115,7 @@ async def retrieve_session(session_name):
         return None
     
 
-async def create_user_group(db: DatabaseController, client: TelegramClient, bot: Bot, user) -> int:
+async def create_user_group(db: DatabaseController, bot: Bot, user) -> int:
     """Create a user group and return its ID."""
     try:
         user_id = user.get("user_id")
@@ -125,13 +123,32 @@ async def create_user_group(db: DatabaseController, client: TelegramClient, bot:
         last_name = user.get("last_name")
 
         group_name = first_name + (" " + last_name if last_name else "")
+        bot_settings = await db.get_bot_settings()
         
         # Get bot and user entities
-        bot_entity = await client.get_entity(Config.BOT_USERNAME)
+        support_bot_username = bot_settings.get('support_bot_username')
+
+        # Initialize Telethon client
+        client = await get_random_available_session(db)
+
+        # Start Telethon client if not already started
+        if not client:
+            logger.error("Failed to forward ticket to admin - No suitable session found (all are either unauthorized, failed, or hit group limit).")
+            bot_settings = await db.get_bot_settings()
+            raw_username = bot_settings.get('support_username', '')
+            support_username = raw_username if raw_username.startswith('@') else '@' + raw_username
+            await bot.send_message(
+                chat_id=support_username,
+                text=f"ERROR: Failed to forward ticket to admin - No suitable session found (all are either unauthorized, failed, or hit group limit).\n{e}"
+            )
+            return
+        
+        if not client.is_connected():
+            await client.start()
+        bot_entity = await client.get_entity(support_bot_username)
         if Config.DEVELOPMENT_MODE:
             admin_entity = await client.get_entity(Config.SUPPORT_ADMIN_USERNAME)
         else:
-            bot_settings = await db.get_bot_settings()
             support_username = bot_settings.get('support_username')
             admin_entity = await client.get_entity(support_username)
 
@@ -193,11 +210,14 @@ async def create_user_group(db: DatabaseController, client: TelegramClient, bot:
         return group_id
 
     except Exception as e:
-        bot_settings = await db.get_bot_settings()
-        raw_username = bot_settings.get('support_username', '')
-        support_username = raw_username if raw_username.startswith('@') else '@' + raw_username
         logger.error(f"Failed to create group for user {user_id}: {e}")
         raise
+
+    finally:
+        # Ensure Telethon client is disconnected to avoid session issues
+        if client.is_connected():
+            await client.disconnect()
+        
 
 async def ask(db: DatabaseController, bot: Bot, user_id: int, group_id: int):
     """Handle automatic /ask for user when he writes for the first time, splitting response if over 4096 chars."""
@@ -378,26 +398,9 @@ async def forward_ticket_to_admin(db: DatabaseController, bot: Bot, user, ticket
 
 
         if not user_group_id:
-            # Initialize Telethon client
-            client = await get_random_available_session(db)
-
-            # Start Telethon client if not already started
-            if not client:
-                logger.error("Failed to forward ticket to admin - No suitable session found (all are either unauthorized, failed, or hit group limit).")
-                bot_settings = await db.get_bot_settings()
-                raw_username = bot_settings.get('support_username', '')
-                support_username = raw_username if raw_username.startswith('@') else '@' + raw_username
-                await bot.send_message(
-                    chat_id=support_username,
-                    text=f"ERROR: Failed to forward ticket to admin - No suitable session found (all are either unauthorized, failed, or hit group limit).\n{e}"
-                )
-                return
             
-            if not client.is_connected():
-                await client.start()
 
-            user_group_id = await create_user_group(db, client, bot, user)
-            await client.disconnect()
+            user_group_id = await create_user_group(db, bot, user)
 
         if user_group_id:
             await db.set_messages_forwarded_for_ticket(ticket.get('ticket_id'))
@@ -445,8 +448,3 @@ async def forward_ticket_to_admin(db: DatabaseController, bot: Bot, user, ticket
             chat_id=user_group_id,
             text=f"ERROR FORWARDING USER TICKET TO THIS GROUP:\n{e}"
         )
-    finally:
-        # Ensure Telethon client is disconnected to avoid session issues
-        if client.is_connected():
-            await client.disconnect()
-        
