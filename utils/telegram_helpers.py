@@ -11,18 +11,22 @@ from utils.logger import logger
 from config.config import Config
 from controllers.db_controller import DatabaseController
 
-
-async def get_random_available_session(db: DatabaseController, group_limit: int = 45) -> TelegramClient:
+async def get_random_available_session(db: DatabaseController, group_limit: int = 45, excluded_session_names: list[str] = None) -> TelegramClient:
     """
-    Find a usable Telethon session from the directory that owns fewer than `group_limit` groups
-    based on the database record (via created_by column). Also updates the first name if needed.
+    Find a usable Telethon session from the directory that owns fewer than `group_limit` groups,
+    excluding any in the `excluded_session_names` list.
     """
+    excluded_session_names = excluded_session_names or []
     session_dir = "sessions/narvesensupportbot"
     session_files = [f for f in os.listdir(session_dir) if f.endswith(".session")]
     random.shuffle(session_files)
 
     for session_file in session_files:
         session_name = session_file.replace(".session", "")
+
+        if session_name in excluded_session_names:
+            continue
+
         session_path = os.path.join(session_dir, session_name)
         json_path = os.path.join(session_dir, session_name + ".json")
 
@@ -39,16 +43,16 @@ async def get_random_available_session(db: DatabaseController, group_limit: int 
             logger.warning(f"Failed to read JSON for session {session_name}: {e}")
             continue
 
-        # Check in DB how many groups this session has created
+        # Check how many groups this session has created
         try:
             group_count = await db.count_of_groups_created_by(session_name)
             if group_count >= group_limit:
                 logger.info(f"Session {session_name} already created {group_count} groups. Skipping session.")
                 continue
         except Exception as e:
-            logger.error(f"Failed to get group count for session {session_name} from DB: {e}")
+            logger.error(f"Failed to get group count for session {session_name}: {e}")
             continue
-        
+
         proxy = get_socks5_sticky_proxy(session_name)
 
         # Initialize and authorize Telethon client
@@ -58,12 +62,13 @@ async def get_random_available_session(db: DatabaseController, group_limit: int 
             support_bot_username = bot_settings.get('support_bot_username')
             await client.connect()
             await client.get_entity(support_bot_username)
+
             if not await client.is_user_authorized():
                 logger.warning(f"Session {session_name} is not authorized. Skipping session.")
                 await client.disconnect()
                 continue
 
-            logger.info(f"Using session {session_name} ({group_count} existing groups for this session)")
+            logger.info(f"Using session {session_name} ({group_count} existing groups)")
             return client
 
         except Exception as e:
@@ -73,6 +78,7 @@ async def get_random_available_session(db: DatabaseController, group_limit: int 
 
     logger.error("FAILED TO RETRIEVE AVAILABLE SESSION - ALL SESSIONS HAVE GROUP LIMIT REACHED OR BANNED")
     return None
+
 
 async def retrieve_session(session_name):
     session_dir = "sessions/narvesensupportbot"
@@ -114,110 +120,128 @@ async def retrieve_session(session_name):
             await client.disconnect()
         return None
     
-
 async def create_user_group(db: DatabaseController, bot: Bot, user) -> int:
     """Create a user group and return its ID."""
-    try:
-        user_id = user.get("user_id")
-        first_name = user.get("first_name")
-        last_name = user.get("last_name")
+    session_dir = "sessions/narvesensupportbot"
+    session_files = [f for f in os.listdir(session_dir) if f.endswith(".session")]
+    excluded_sessions = []
+    max_retries = len(session_files)
 
-        group_name = first_name + (" " + last_name if last_name else "")
-        bot_settings = await db.get_bot_settings()
-        
-        # Get bot and user entities
-        support_bot_username = bot_settings.get('support_bot_username')
+    user_id = user.get("user_id")
+    first_name = user.get("first_name")
+    last_name = user.get("last_name")
+    group_name = first_name + (" " + last_name if last_name else "")
 
-        # Initialize Telethon client
-        client = await get_random_available_session(db)
-
-        # Start Telethon client if not already started
-        if not client:
-            logger.error("Failed to forward ticket to admin - No suitable session found (all are either unauthorized, failed, or hit group limit).")
-            bot_settings = await db.get_bot_settings()
-            raw_username = bot_settings.get('support_username', '')
-            support_username = raw_username if raw_username.startswith('@') else '@' + raw_username
-            await bot.send_message(
-                chat_id=support_username,
-                text=f"ERROR: Failed to forward ticket to admin - No suitable session found (all are either unauthorized, failed, or hit group limit).\n{e}"
+    for attempt in range(max_retries):
+        client = None
+        try:
+            client = await get_random_available_session(
+                db,
+                excluded_session_names=excluded_sessions
             )
-            return
-        
-        if not client.is_connected():
-            await client.start()
-        bot_entity = await client.get_entity(support_bot_username)
-        if Config.DEVELOPMENT_MODE:
-            admin_entity = await client.get_entity(Config.SUPPORT_ADMIN_USERNAME)
-        else:
-            support_username = bot_settings.get('support_username')
-            admin_entity = await client.get_entity(support_username)
+            if not client:
+                raise RuntimeError("No suitable session found.")
 
-        if not bot_entity or not admin_entity:
-            raise ValueError("Failed to retrieve bot or user entity")
+            if not client.is_connected():
+                await client.start()
 
-        # Create a private group
-        result = await client(CreateChatRequest(
-            users=[bot_entity, admin_entity],
-            title=group_name
-        ))
-        group_id = result.updates.chats[0].id
-        group_id = -group_id
-        group_entity = await client.get_entity(group_id)
-        me = await client.get_me()
-        created_by = '+' + me.phone
+            bot_settings = await db.get_bot_settings()
+            support_bot_username = bot_settings.get('support_bot_username')
+            bot_entity = await client.get_entity(support_bot_username)
 
-        await db.set_user_group_id(user_id, group_id, created_by)
-        logger.info(f"Created new group '{group_name}' for user {user_id}")
-
-        # Give support admin rights in case session gets banned
-        await client(EditChatAdminRequest(
-            chat_id=group_entity.id,
-            user_id=admin_entity,
-            is_admin=True
-        ))
-    
-        # Set group description to user_id
-        try:
-            await client(EditChatAboutRequest(
-                peer=group_id,  # direct int ID is okay here
-                about=str(user_id)
-            ))
-            logger.info(f"Set group description to user_id: {user_id}")
-        except Exception as e:
-            logger.warning(f"Failed to set group description: {e}")
-
-        
-        # Set group profile pic using a local file
-        try:
-            photo_path = "data/warning.jpg"
-
-            if os.path.exists(photo_path):
-                logger.info(f"Using local photo: {photo_path}")
-                uploaded_file = await client.upload_file(photo_path)
-                input_photo = InputChatUploadedPhoto(uploaded_file)
-
-                # Set the new group photo
-                await client(EditChatPhotoRequest(
-                    chat_id=group_entity.id,
-                    photo=input_photo
-                ))
+            if Config.DEVELOPMENT_MODE:
+                admin_entity = await client.get_entity(Config.SUPPORT_ADMIN_USERNAME)
             else:
-                logger.error(f"Local photo not found: {photo_path}")
-                
+                support_username = bot_settings.get('support_username')
+                admin_entity = await client.get_entity(support_username)
+
+            if not bot_entity or not admin_entity:
+                raise ValueError("Failed to retrieve bot or admin entity.")
+
+            # CREATE CHAT WITH SUPPORT ADMIN AND BOT
+            result = await client(CreateChatRequest(
+                users=[bot_entity, admin_entity],
+                title=group_name
+            ))
+            group_id = -result.updates.chats[0].id
+            group_entity = await client.get_entity(group_id)
+
+            # SET GROUP DESCRIPTION
+            try:
+                await client(EditChatAboutRequest(
+                    peer=group_id,
+                    about=str(user_id)
+                ))
+                logger.info(f"Set group description to user_id: {user_id}")
+            except Exception as e:
+                logger.error(f"Failed to set group description: {e}")
+                # ⛔ Retry required if this fails
+                raise e
+
+            me = await client.get_me()
+            created_by = '+' + me.phone
+            await db.set_user_group_id(user_id, group_id, created_by)
+            logger.info(f"Created new group '{group_name}' for user {user_id}")
+
+            # OPTIONAL: Promote admin
+            try:
+                await client(EditChatAdminRequest(
+                    chat_id=group_entity.id,
+                    user_id=admin_entity,
+                    is_admin=True
+                ))
+                logger.info(f"Promoted admin to group: {admin_entity.id}")
+            except Exception as e:
+                logger.warning(f"Failed to promote admin: {e}")
+
+            # OPTIONAL: Set group photo
+            try:
+                photo_path = "data/warning.jpg"
+                if os.path.exists(photo_path):
+                    uploaded_file = await client.upload_file(photo_path)
+                    input_photo = InputChatUploadedPhoto(uploaded_file)
+                    await client(EditChatPhotoRequest(
+                        chat_id=group_entity.id,
+                        photo=input_photo
+                    ))
+                    logger.info("Set group profile picture.")
+                else:
+                    logger.warning(f"Photo not found: {photo_path}")
+            except Exception as e:
+                logger.warning(f"Failed to set group profile picture: {e}")
+
+            # Success, no need to retry further
+            return group_id
+
         except Exception as e:
-            logger.warning(f"Failed to set group profile picture: {e}")
-            
-        return group_id
+            logger.error(f"[Attempt {attempt + 1}] Failed to create group for user {user_id}: {e}")
+            if client:
+                try:
+                    me = await client.get_me()
+                    session_name = '+' + me.phone
+                    excluded_sessions.append(session_name)
+                except Exception as ex:
+                    logger.warning(f"Could not retrieve session name to exclude: {ex}")
+            continue
 
-    except Exception as e:
-        logger.error(f"Failed to create group for user {user_id}: {e}")
-        raise
+        finally:
+            if client and client.is_connected():
+                await client.disconnect()
 
-    finally:
-        # Ensure Telethon client is disconnected to avoid session issues
-        if client.is_connected():
-            await client.disconnect()
-        
+    # ❌ Final failure
+    error_message = f"ERROR: Failed to create group for user {user_id} after {max_retries} attempts."
+    logger.error(error_message)
+
+    bot_settings = await db.get_bot_settings()
+    support_username = bot_settings.get('support_username', '')
+    if support_username and not support_username.startswith('@'):
+        support_username = '@' + support_username
+
+    await bot.send_message(
+        chat_id=support_username,
+        text=error_message
+    )
+
 
 async def ask(db: DatabaseController, bot: Bot, user_id: int, group_id: int):
     """Handle automatic /ask for user when he writes for the first time, splitting response if over 4096 chars."""

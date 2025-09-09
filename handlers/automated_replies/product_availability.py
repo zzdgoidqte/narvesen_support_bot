@@ -64,5 +64,5 @@ Message 2:
 
     # Send both messages with a delay
     await bot.send_message(user_id, msg1)
-    await asyncio.sleep(random.uniform(4, 6))
+    await asyncio.sleep(random.uniform(6, 8))
     await bot.send_message(user_id, msg2)
