@@ -4,13 +4,9 @@ from telethon import TelegramClient
 from utils.helpers import get_socks5_sticky_proxy, escape_markdown_v1
 from utils.logger import logger
 from telethon.tl.types import (
-    Message,
-    MessageMediaPhoto,
-    MessageMediaDocument,
-    DocumentAttributeVideo,
-    DocumentAttributeAudio,
-    DocumentAttributeSticker,
-    DocumentAttributeAnimated,
+    Message, MessageMediaPhoto, MessageMediaDocument,
+    DocumentAttributeVideo, DocumentAttributeAudio,
+    DocumentAttributeSticker, DocumentAttributeAnimated,
     DocumentAttributeFilename
 )
 
@@ -40,7 +36,7 @@ async def retrieve_session(session_name):
 
     # Initialize and authorize Telethon client
     try:
-        client = TelegramClient(session_path, api_id, api_hash, proxy=proxy)
+        client = TelegramClient(session_path, api_id, api_hash, proxy=None)
         await client.connect()
         if not await client.is_user_authorized():
             logger.warning(f"[Cleanup] Session {session_name} is not authorized.")
@@ -56,10 +52,9 @@ async def retrieve_session(session_name):
         return None
     
 
+
 def get_message_content(message: Message) -> str:
     """Return a label describing the content type of a message (e.g., 'photo', 'video', etc.)"""
-    if message.text:
-        return 'text'
 
     media = message.media
     if isinstance(media, MessageMediaPhoto):
@@ -69,7 +64,7 @@ def get_message_content(message: Message) -> str:
         if not media.document:
             return "document"
 
-        attrs = media.document.attributes
+        attrs = media.document.attributes or []
         for attr in attrs:
             if isinstance(attr, DocumentAttributeVideo):
                 return "video"
@@ -85,5 +80,9 @@ def get_message_content(message: Message) -> str:
                 return "voice"
 
         return "document"
+
+    # If there's no media but there's text, it's a plain text message
+    if message.text:
+        return "text"
 
     return "other"
