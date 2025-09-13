@@ -412,7 +412,6 @@ class DatabaseController:
                 logger.error(f"Unexpected error getting orders for user: {e}")
                 raise
 
-    
     async def get_bot_settings(self):
         """Retrieve all bot settings from the bot_settings table.
 
@@ -513,7 +512,7 @@ class DatabaseController:
                 logger.error(f"Unexpected error retrieving user and drops: {e}")
                 raise
     
-    async def save_user_message(self, user_id: int, message_id: int, user_text: str, replied: bool = False) -> bool:
+    async def save_user_message(self, user_id: int, message_id: int, user_text: str, message_type: str = None, replied: bool = False) -> bool:
         """
         Log a support message sent by a user into the support_messages table,
         creating a support ticket if necessary.
@@ -522,6 +521,7 @@ class DatabaseController:
             user_id (int): Telegram user ID of the sender.
             message_id (int): Telegram message ID.
             user_text (str): Text content of the message.
+            message_type (str, optional): Type of the message (e.g., "text", "photo"). Defaults to None.
             replied (bool, optional): Whether the message has already been replied to. Defaults to False.
 
         Returns:
@@ -560,10 +560,10 @@ class DatabaseController:
 
                     # Step 3: Insert support message
                     insert_message_query = """
-                        INSERT INTO support_messages (ticket_id, user_id, message_id, user_text, replied)
-                        VALUES ($1, $2, $3, $4, $5)
+                        INSERT INTO support_messages (ticket_id, user_id, message_id, user_text, message_type, replied)
+                        VALUES ($1, $2, $3, $4, $5, $6)
                     """
-                    await conn.execute(insert_message_query, ticket_id, user_id, message_id, user_text, replied)
+                    await conn.execute(insert_message_query, ticket_id, user_id, message_id, user_text, message_type, replied)
                     logger.debug(f"Logged message for ticket {ticket_id} from user {user_id}")
 
                     return True
@@ -574,6 +574,7 @@ class DatabaseController:
             except Exception as e:
                 logger.error(f"Unexpected error while logging message from user {user_id}: {e}")
                 raise
+
 
     async def get_active_support_tickets(
         self,

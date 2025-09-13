@@ -1,7 +1,6 @@
 from aiogram import Bot
 from aiogram.types import InputMediaPhoto, FSInputFile
 from controllers.db_controller import DatabaseController
-from utils.telegram_helpers import forward_ticket_to_admin
 import asyncio
 import random
 

@@ -1,9 +1,6 @@
-import difflib
 import aiohttp
 import socks
 import emoji
-from urllib.parse import quote
-from aiohttp_socks import ProxyConnector
 from config.config import Config
 from utils.logger import logger
 
@@ -85,29 +82,6 @@ def escape_markdown_v2(text: str) -> str:
     return "".join(f"\\{char}" if char in special_chars else char for char in text)
 
 
-def is_similar_to_start(user_text: str, threshold: float = 0.7) -> bool:
-    """
-    Check if a message is similar to 'start' using fuzzy matching.
-    
-    Args:
-        user_text (str): The user's message
-        threshold (float): Similarity ratio threshold between 0 and 1.
-
-    Returns:
-        bool: True if message is similar to 'start'
-    """
-    if not user_text:
-        return False
-    user_text = user_text.strip().lower()
-
-    # Remove leading characters like / or #
-    cleaned = user_text.lstrip("/#!@$%&*")
-
-    # Compare to 'start'
-    similarity = difflib.SequenceMatcher(None, cleaned, "start").ratio()
-    return similarity >= threshold
-
-
 def get_socks5_sticky_proxy(session_name: str):
     """
     Generate a SOCKS5 sticky proxy tuple for use with Telethon or similar libraries,
@@ -137,3 +111,4 @@ def get_socks5_sticky_proxy(session_name: str):
     except Exception as e:
         logger.error(f"[Proxy {session_name}] Error: {e}")
         return None
+

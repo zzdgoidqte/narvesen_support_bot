@@ -2,12 +2,10 @@ import asyncio
 import pytz
 from aiogram import Bot
 from datetime import datetime, timedelta, timezone
-from config.config import Config
 from utils.logger import logger
 from utils.helpers import query_nano_gpt, is_emoji_only
-from utils.telegram_helpers import is_message_deleted, forward_ticket_to_admin
-from handlers.automated_replies import *
-from handlers.automated_replies.misc_replies import get_time_based_message
+from workflow.automated_replies import *
+from workflow.automated_replies.misc_replies import get_time_based_message
 from controllers.db_controller import DatabaseController
 
 
@@ -28,14 +26,14 @@ USER_CONVERSATIONS = {
     "ok": handle_thanks,
 
     # Forward to admin
-    "wrong_drop_info": forward_ticket_to_admin,
-    "payment_sent_but_no_drop_or_product_or_location_or_coordinates": forward_ticket_to_admin,
-    "less_product_received_than_expected": forward_ticket_to_admin, # Maybe automated response?
-    "kladmen_or_packaging_complaint": forward_ticket_to_admin, # Maybe automated response?
-    "bot_banned_or_deleted_or_inaccessible": forward_ticket_to_admin, # Maybe automated response?
-    "opinion_or_info_question": forward_ticket_to_admin,
-    "can_you_get_me_the_closest_drop_to_x_location": forward_ticket_to_admin,
-    "other": forward_ticket_to_admin,
+    "wrong_drop_info": None,
+    "payment_sent_but_no_drop_or_product_or_location_or_coordinates": None,
+    "less_product_received_than_expected": None, # Maybe automated response?
+    "kladmen_or_packaging_complaint": None, # Maybe automated response?
+    "bot_banned_or_deleted_or_inaccessible": None, # Maybe automated response?
+    "opinion_or_info_question": None,
+    "can_you_get_me_the_closest_drop_to_x_location": None,
+    "other": None,
 }
 
 LANGUAGES = ['lv', 'eng', 'ru', 'ee']
@@ -51,6 +49,9 @@ async def handle_unforwarded_tickets(db: DatabaseController, bot: Bot):
     """
     while True:
         try:
+            print("sdad")
+            await asyncio.sleep(2)
+            continue
             active_unforwarded_tickets = await db.get_active_support_tickets(messages_forwarded=False)
 
             for ticket in active_unforwarded_tickets:
@@ -92,9 +93,6 @@ async def categorise_ticket(db: DatabaseController, bot: Bot, ticket):
 
         for msg in messages:
             msg_text = msg.get("user_text")
-            if await is_message_deleted(bot, user_id, msg.get('message_id')):
-                await db.mark_message_as_deleted(msg.get('id'))
-                continue
             unread_messages.append(msg_text)
 
         if not unread_messages:
@@ -111,7 +109,7 @@ async def categorise_ticket(db: DatabaseController, bot: Bot, ticket):
             category_key = 'other'
             lang = 'other'
             await db.set_lang_and_category_for_ticket(category_key, lang, ticket.get('ticket_id'))
-            await forward_ticket_to_admin(db, bot, user, ticket, lang)
+            # await forward_ticket_to_admin(db, bot, user, ticket, lang)
             return
         elif all(msg in ["(voice)", "(audio)"] for msg in unread_messages):
             category_key = 'voice_message'
@@ -169,7 +167,15 @@ lang:category
         handler_func = USER_CONVERSATIONS[category_key]
 
         if handler_func:    
-            if category_key not in ["cant_find_product_or_drop_or_dead_drop", "other", "wrong_drop_info", "payment_sent_no_product", "less_product_received_than_expected", "kladmen_or_packaging_complaint", "opinion_or_info_question", "can_you_get_me_the_closest_drop_to_x_location", "bot_banned_or_deleted_or_inaccessible"]:
+            if category_key in [
+                "dont_know_how_to_pay",
+                "restock_request_for_product_or_location",
+                "is_product_still_available",
+                "what_is_usual_product_arrival_time",
+                "user_says_thanks",
+                "issue_resolved_by_user",
+                "ok"
+            ]: 
                 previous_users_category_key = await db.get_previous_users_category_key(user_id)
                 # Close ticket and dont reply if user spamming the same question.
                 if category_key == previous_users_category_key:
@@ -178,7 +184,7 @@ lang:category
             await db.set_lang_and_category_for_ticket(category_key, lang, ticket.get('ticket_id'))
             if category_key == "cant_find_product_or_drop_or_dead_drop": # Lost drop with proof
                 if any(msg in ["(photo)", "(video)", "(video_note)"] for msg in unread_messages):
-                    await forward_ticket_to_admin(db, bot, user, ticket, lang)
+                    # await forward_ticket_to_admin(db, bot, user, ticket, lang)
                     return
             await handler_func(db, bot, user, ticket, lang)
 
@@ -213,9 +219,6 @@ async def handle_categorised_unforwarded_ticket(db: DatabaseController, bot: Bot
         for msg in messages:
             msg_text = msg.get("user_text")
 
-            if await is_message_deleted(bot, user_id, msg.get("message_id")):
-                await db.mark_message_as_deleted(msg.get("id"))
-                continue
 
             if not msg.get("replied", False):
                 unread_messages.append(msg_text)
@@ -253,7 +256,7 @@ async def handle_categorised_unforwarded_ticket(db: DatabaseController, bot: Bot
                 message_time = get_time_based_message(lang, hour)
                 await bot.send_message(user_id, message_time)
 
-            await forward_ticket_to_admin(db, bot, user, ticket, lang)
+            # await forward_ticket_to_admin(db, bot, user, ticket, lang)
             return
 
 
@@ -289,7 +292,7 @@ Respond with only one word: Complaint or Resolved.
                     message_time = get_time_based_message(lang, hour)
                     await bot.send_message(user_id, message_time)
 
-                await forward_ticket_to_admin(db, bot, user, ticket, lang)
+                # await forward_ticket_to_admin(db, bot, user, ticket, lang)
         elif message_classification.strip().lower() == 'resolved':
             await handle_thanks(db, bot, user, ticket, lang)
 
