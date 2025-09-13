@@ -578,7 +578,6 @@ class DatabaseController:
 
     async def get_active_support_tickets(
         self,
-        messages_forwarded: bool | None = None,
         user_id: int | None = None
     ) -> list[dict]:
         """
@@ -586,10 +585,6 @@ class DatabaseController:
         optionally filtering by forwarding status and user.
 
         Args:
-            messages_forwarded (bool | None, optional): 
-                - If True, only return tickets forwarded to admin.
-                - If False, only return tickets NOT forwarded.
-                - If None, don't filter by this field.
             user_id (int | None, optional): If provided, only return tickets for this user.
 
         Returns:
@@ -604,12 +599,6 @@ class DatabaseController:
 
                 # Always filter for open (unclosed) tickets
                 conditions.append("t.closed = FALSE")
-
-                # Filter by messages_forwarded if explicitly set
-                if messages_forwarded is not None:
-                    conditions.append(f"t.messages_forwarded = ${param_index}")
-                    values.append(messages_forwarded)
-                    param_index += 1
 
                 # Filter by user_id if provided
                 if user_id is not None:

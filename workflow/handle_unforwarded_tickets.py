@@ -1,6 +1,6 @@
 import asyncio
 import pytz
-from aiogram import Bot
+from telethon import TelegramClient
 from datetime import datetime, timedelta, timezone
 from utils.logger import logger
 from utils.helpers import query_nano_gpt, is_emoji_only
@@ -39,7 +39,7 @@ USER_CONVERSATIONS = {
 LANGUAGES = ['lv', 'eng', 'ru', 'ee']
 
 
-async def handle_unforwarded_tickets(db: DatabaseController, bot: Bot):
+async def handle_unforwarded_tickets(db: DatabaseController, client: TelegramClient):
     """
     Periodically checks for unclosed and unforwardeed tickets (not forwarded to admin for further processing).
     For each one, runs a separate task to handle it.
@@ -49,10 +49,7 @@ async def handle_unforwarded_tickets(db: DatabaseController, bot: Bot):
     """
     while True:
         try:
-            print("sdad")
-            await asyncio.sleep(2)
-            continue
-            active_unforwarded_tickets = await db.get_active_support_tickets(messages_forwarded=False)
+            active_unforwarded_tickets = await db.get_active_support_tickets()
 
             for ticket in active_unforwarded_tickets:
                 ticket_id = ticket.get("ticket_id")
@@ -76,15 +73,15 @@ async def handle_unforwarded_tickets(db: DatabaseController, bot: Bot):
                     # Mark as handled
                     await db.mark_messages_as_replied(ticket_id)
                     if not support_issue:
-                        asyncio.create_task(categorise_ticket(db, bot, ticket))
+                        asyncio.create_task(categorise_ticket(db, client, ticket))
                     else:
-                        asyncio.create_task(handle_categorised_unforwarded_ticket(db, bot, ticket))
+                        asyncio.create_task(handle_categorised_unforwarded_ticket(db, client, ticket))
 
             await asyncio.sleep(10)
         except Exception as e:
             logger.error(f"Error in handle_unforwarded_tickets: {e}")
 
-async def categorise_ticket(db: DatabaseController, bot: Bot, ticket):
+async def categorise_ticket(db: DatabaseController, client: TelegramClient, ticket):
     try:
         user_id = ticket.get("user_id")
         user = await db.get_user_by_id(user_id)
@@ -118,7 +115,7 @@ async def categorise_ticket(db: DatabaseController, bot: Bot, ticket):
             prev_support_issue = await db.get_previous_users_category_key(user_id)
             await db.close_support_ticket(ticket.get('ticket_id'))
             if not prev_support_issue in ["(voice)", "(audio)"]:
-                await handle_voice_message(db, bot, user, ticket, lang) 
+                await handle_voice_message(db, client, user, ticket, lang) 
             return
         elif all(is_emoji_only(msg) or msg in ["(sticker)", "(animation)", "(document)", "(other)"] for msg in unread_messages):
             await db.close_support_ticket(ticket.get('ticket_id'))
@@ -186,13 +183,13 @@ lang:category
                 if any(msg in ["(photo)", "(video)", "(video_note)"] for msg in unread_messages):
                     # await forward_ticket_to_admin(db, bot, user, ticket, lang)
                     return
-            await handler_func(db, bot, user, ticket, lang)
+            await handler_func(db, client, user, ticket, lang)
 
     except Exception as e:
         logger.error(f"Error in categorise_ticket: {e}")
 
 
-async def handle_categorised_unforwarded_ticket(db: DatabaseController, bot: Bot, ticket):
+async def handle_categorised_unforwarded_ticket(db: DatabaseController, client: TelegramClient, ticket):
     """
     For now only 1 problems to handle in this scenario 
     1. cant_find_product_or_drop_or_dead_drop
@@ -246,7 +243,7 @@ async def handle_categorised_unforwarded_ticket(db: DatabaseController, bot: Bot
             msg in ["(photo)", "(video)", "(video_note)"] for msg in all_messages
         ):
             message_main = message_variations_courier.get(lang, message_variations_courier["eng"])
-            await bot.send_message(user_id, message_main)
+            await client.send_message(user_id, message_main)
 
             # Check Helsinki time
             helsinki_time = datetime.now(pytz.timezone("Europe/Helsinki"))
@@ -254,7 +251,7 @@ async def handle_categorised_unforwarded_ticket(db: DatabaseController, bot: Bot
 
             if hour >= 22 or hour < 7:
                 message_time = get_time_based_message(lang, hour)
-                await bot.send_message(user_id, message_time)
+                await client.send_message(user_id, message_time)
 
             # await forward_ticket_to_admin(db, bot, user, ticket, lang)
             return
@@ -282,7 +279,7 @@ Respond with only one word: Complaint or Resolved.
         if message_classification.strip().lower() == 'complaint':
             if support_issue == "cant_find_product_or_drop_or_dead_drop":
                 message_main = message_variations_courier.get(lang, message_variations_courier["eng"])
-                await bot.send_message(user_id, message_main)
+                await client.send_message(user_id, message_main)
 
                 # Check Helsinki time
                 helsinki_time = datetime.now(pytz.timezone("Europe/Helsinki"))
@@ -290,11 +287,11 @@ Respond with only one word: Complaint or Resolved.
 
                 if hour >= 22 or hour < 10:
                     message_time = get_time_based_message(lang, hour)
-                    await bot.send_message(user_id, message_time)
+                    await client.send_message(user_id, message_time)
 
                 # await forward_ticket_to_admin(db, bot, user, ticket, lang)
         elif message_classification.strip().lower() == 'resolved':
-            await handle_thanks(db, bot, user, ticket, lang)
+            await handle_thanks(db, client, user, ticket, lang)
 
     except Exception as e:
         logger.error(f"Error in handle_categorised_ticket: {e}")

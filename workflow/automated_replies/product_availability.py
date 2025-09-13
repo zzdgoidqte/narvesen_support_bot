@@ -2,7 +2,7 @@ import asyncio
 import random
 from utils.helpers import query_nano_gpt
 
-async def handle_check_product_availability(db, bot, user, ticket, lang):
+async def handle_check_product_availability(db, client, user, ticket, lang):
     await db.close_support_ticket(ticket.get('ticket_id'))
 
     bot_settings = await db.get_bot_settings()
@@ -63,6 +63,6 @@ Message 2:
         msg1, msg2 = fallback_messages.get(target_lang, fallback_messages["eng"])
 
     # Send both messages with a delay
-    await bot.send_message(user_id, msg1)
+    await client.send_message(user_id, msg1)
     await asyncio.sleep(random.uniform(6, 8))
-    await bot.send_message(user_id, msg2)
+    await client.send_message(user_id, msg2)

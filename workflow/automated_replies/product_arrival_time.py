@@ -1,7 +1,7 @@
 import asyncio
 import random
 
-async def handle_product_arrival_time(db, bot, user, ticket, lang):
+async def handle_product_arrival_time(db, client, user, ticket, lang):
     user_id = user.get("user_id")
     await db.close_support_ticket(ticket.get('ticket_id'))
 
@@ -50,4 +50,4 @@ If paying by card via Mercuryo: it's not our platform and we are not responsible
 
     message_text = messages.get(lang, messages["eng"])
 
-    await bot.send_message(user_id, message_text)
+    await client.send_message(user_id, message_text)

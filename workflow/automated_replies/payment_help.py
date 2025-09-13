@@ -1,11 +1,15 @@
-from aiogram import Bot
-from aiogram.types import InputMediaPhoto, FSInputFile
 from controllers.db_controller import DatabaseController
 import asyncio
 import random
+from telethon.tl.functions.messages import SendMultiMediaRequest
+from telethon.tl.types import (
+    InputMediaUploadedPhoto,
+    InputSingleMedia,
+)
 
 
-async def handle_payment_help(db, bot, user, ticket, lang):
+
+async def handle_payment_help(db, client, user, ticket, lang):
     await db.close_support_ticket(ticket.get('ticket_id'))
     user_id = user.get("user_id")
 
@@ -122,24 +126,37 @@ async def handle_payment_help(db, bot, user, ticket, lang):
 ⚠️ Exchange fees apply. Crypto payments are cheaper and faster!
 """
 }
+    entity = await client.get_input_entity(user_id)
 
     # --- Get texts by language ---
     crypto_text = crypto_guides.get(lang, crypto_guides["eng"])
     card_caption = card_payment_captions.get(lang, card_payment_captions["eng"])
 
     # --- Send crypto guide ---
-    await bot.send_message(
+    await client.send_message(
         user_id,
         crypto_text,
         parse_mode="HTML",
         disable_web_page_preview=True
-    )
+        )
+    photo1 = await client.upload_file("data/card_payment_1.jpg")
+    photo2 = await client.upload_file("data/card_payment_2.jpg")
 
-    # --- Send card payment media ---
-    photo1 = FSInputFile("data/card_payment_1.jpg")
-    photo2 = FSInputFile("data/card_payment_2.jpg")
-    media = [
-        InputMediaPhoto(media=photo1, caption=card_caption, parse_mode="HTML"),
-        InputMediaPhoto(media=photo2)
+    # Build media group
+    media_group = [
+        InputSingleMedia(
+            media=InputMediaUploadedPhoto(file=photo1),
+            message=card_caption,
+            entities=[]
+        ),
+        InputSingleMedia(
+            media=InputMediaUploadedPhoto(file=photo2),
+            message="",  # only first item should have a caption
+        ),
     ]
-    await bot.send_media_group(user_id, media)
+
+    # Send media group
+    await client(SendMultiMediaRequest(
+        peer=entity,
+        multi_media=media_group
+    ))

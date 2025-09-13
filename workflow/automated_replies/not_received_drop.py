@@ -2,7 +2,7 @@ import asyncio
 import random
 from utils.helpers import query_nano_gpt
 
-async def handle_not_received_drop(db, bot, user, ticket, lang):
+async def handle_not_received_drop(db, client, user, ticket, lang):
     user_id = user.get("user_id")
 
     target_lang = lang if lang in ["lv", "ee", "ru", "eng"] else "eng"
@@ -78,8 +78,8 @@ Message 3:
     else:
         msg1, msg2, msg3 = fallback_variations.get(target_lang, fallback_variations["eng"])
 
-    await bot.send_message(user_id, msg1)
+    await client.send_message(user_id, msg1)
     await asyncio.sleep(random.uniform(6, 8))
-    await bot.send_message(user_id, msg2)
+    await client.send_message(user_id, msg2)
     await asyncio.sleep(random.uniform(6, 8))
-    await bot.send_message(user_id, msg3)
+    await client.send_message(user_id, msg3)

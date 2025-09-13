@@ -1,6 +1,6 @@
 from utils.helpers import query_nano_gpt
 
-async def handle_restock_info(db, bot, user, ticket, lang):
+async def handle_restock_info(db, client, user, ticket, lang):
     user_id = user.get("user_id")
     await db.close_support_ticket(ticket.get('ticket_id'))
 
@@ -28,7 +28,7 @@ Original text:
     # Send the AI-generated message to the user
     if ai_response:
         message_text = ai_response.strip()
-        await bot.send_message(user_id, message_text)
+        await client.send_message(user_id, message_text)
     else:
         # Fallback in case AI fails
         fallback_messages = {
@@ -37,4 +37,4 @@ Original text:
             "ru": "Сейчас у нас нет информации об этом товаре, но мы стараемся как можно быстрее пополнить все запасы",
             "eng": "Currently we don’t have any info about that, but we’re trying to restock every product as soon as possible"
         }
-        await bot.send_message(user_id, fallback_messages.get(target_lang, fallback_messages["eng"]))
+        await client.send_message(user_id, fallback_messages.get(target_lang, fallback_messages["eng"]))
